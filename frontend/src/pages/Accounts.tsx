@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Tag, Spin, Button, Modal, Form, Input, Select, message } from 'antd'
+import { Card, Table, Tag, Spin, Button, Modal, Form, Input, Select, message, Popconfirm } from 'antd'
 import { api, type AccountOut } from '../api'
 import { useAuth } from '../auth'
 
@@ -42,6 +42,33 @@ export default function Accounts() {
 
   if (loading) return <Spin />
 
+  const columns: any[] = [
+    { title: '编码', dataIndex: 'code', width: 100 },
+    { title: '名称', dataIndex: 'name' },
+    { title: '类别', dataIndex: 'category', render: (c: string) => <Tag color="blue">{catLabel[c] || c}</Tag> },
+    { title: '借方发生', dataIndex: 'debit', align: 'right', render: (v: number) => money(v) },
+    { title: '贷方发生', dataIndex: 'credit', align: 'right', render: (v: number) => money(v) },
+    { title: '余额', dataIndex: 'balance', align: 'right', render: (v: number) => money(v) },
+  ]
+  if (canWrite) {
+    columns.push({
+      title: '操作',
+      key: 'op',
+      render: (_: any, r: AccountOut) => (
+        <Popconfirm
+          title={`确认停用科目 ${r.name}？`}
+          onConfirm={async () => {
+            await api.deactivateAccount(r.code)
+            message.success('已停用')
+            load()
+          }}
+        >
+          <Button size="small" danger>停用</Button>
+        </Popconfirm>
+      ),
+    })
+  }
+
   return (
     <Card title="科目余额表" extra={canWrite && <Button type="primary" onClick={() => setOpen(true)}>新增科目</Button>}>
       <Table
@@ -49,14 +76,7 @@ export default function Accounts() {
         rowKey="code"
         dataSource={rows}
         pagination={{ pageSize: 20 }}
-        columns={[
-          { title: '编码', dataIndex: 'code', width: 100 },
-          { title: '名称', dataIndex: 'name' },
-          { title: '类别', dataIndex: 'category', render: (c: string) => <Tag color="blue">{catLabel[c] || c}</Tag> },
-          { title: '借方发生', dataIndex: 'debit', align: 'right', render: (v: number) => money(v) },
-          { title: '贷方发生', dataIndex: 'credit', align: 'right', render: (v: number) => money(v) },
-          { title: '余额', dataIndex: 'balance', align: 'right', render: (v: number) => money(v) },
-        ]}
+        columns={columns}
       />
       <Modal open={open} title="新增科目" onOk={onAdd} onCancel={() => setOpen(false)} okText="创建">
         <Form form={form} layout="vertical" initialValues={{ category: 'asset' }}>

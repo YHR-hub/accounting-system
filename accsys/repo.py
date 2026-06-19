@@ -7,11 +7,11 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .constants import DEFAULT_ACCOUNTS
@@ -701,3 +701,110 @@ def trial_balance_data(session: Session) -> dict:
         "total_credit": float(total_cr),
         "balanced": abs(total_dr - total_cr) < Decimal("0.01"),
     }
+
+
+# ── 账龄 / 预算执行 / 项目损益 / 编辑 ──────────────────
+_AGING_BUCKETS = [("0-30天", 30), ("31-60天", 60), ("61-90天", 90),
+                  ("91-180天", 180), ("181-365天", 365), ("365天以上", 10 ** 9)]
+
+
+def _aging_for(session: Session, code: str, debit_nature: bool) -> Dict[str, float]:
+    today = date.today()
+    rows = session.execute(
+        select(Voucher.date, JournalEntry.debit, JournalEntry.credit)
+        .join(Voucher, Voucher.id == JournalEntry.voucher_id)
+        .where(JournalEntry.account_code == code)
+    ).all()
+    buckets = {label: 0.0 for label, _ in _AGING_BUCKETS}
+    for d, debit, credit in rows:
+        amt = (_f(debit) - _f(credit)) if debit_nature else (_f(credit) - _f(debit))
+        if amt <= 0:
+            continue
+        try:
+            age = (today - date.fromisoformat(str(d)[:10])).days
+        except ValueError:
+            continue
+        for label, upper in _AGING_BUCKETS:
+            if age <= upper:
+                buckets[label] = round(buckets[label] + amt, 2)
+                break
+    return buckets
+
+
+def aging_data(session: Session) -> dict:
+    """应收(1122)/应付(2202)账龄分析。"""
+    return {
+        "receivable": _aging_for(session, "1122", debit_nature=True),
+        "payable": _aging_for(session, "2202", debit_nature=False),
+    }
+
+
+def budget_execution(session: Session, year: int) -> List[dict]:
+    """预算执行：预算 vs 实际(科目余额绝对值)。"""
+    budgets = list_budgets(session, year)
+    accounts = load_accounts(session)
+    balances = calc_balances(session, accounts)
+    name_map = {a["code"]: a["name"] for a in accounts}
+    out = []
+    for b in budgets:
+        actual = abs(float(balances.get(b["account_code"], ZERO)))
+        budget = b["budget_amount"]
+        out.append({
+            **b,
+            "account_name": name_map.get(b["account_code"], ""),
+            "actual": round(actual, 2),
+            "execution_rate": round(actual / budget * 100, 2) if budget else 0.0,
+        })
+    return out
+
+
+def project_pnl(session: Session, project: Project) -> dict:
+    accounts = {a["code"]: a for a in load_accounts(session)}
+    rows = session.execute(
+        select(JournalEntry.account_code, JournalEntry.debit, JournalEntry.credit)
+        .join(Voucher, Voucher.id == JournalEntry.voucher_id)
+        .where(or_(Voucher.summary.like(f"%{project.code}%"),
+                   Voucher.summary.like(f"%{project.name}%")))
+    ).all()
+    income = expense = ZERO
+    for code, debit, credit in rows:
+        a = accounts.get(code)
+        if not a:
+            continue
+        if a["category"] == "income":
+            income += _dec(credit) - _dec(debit)
+        elif a["category"] == "expense":
+            expense += _dec(debit) - _dec(credit)
+    return {
+        "id": project.id, "code": project.code, "name": project.name,
+        "budget": float(project.budget), "income": float(income),
+        "expense": float(expense), "profit": float(income - expense),
+    }
+
+
+def all_projects_pnl(session: Session) -> List[dict]:
+    projects = session.execute(select(Project).order_by(Project.code)).scalars().all()
+    return [project_pnl(session, p) for p in projects]
+
+
+def deactivate_account(session: Session, code: str) -> dict:
+    a = session.get(Account, code)
+    if a is None:
+        raise ValueError("科目不存在")
+    a.is_active = 0
+    session.flush()
+    return {"code": code, "is_active": 0}
+
+
+def update_employee(session: Session, emp_id: int, **fields) -> dict:
+    e = session.get(Employee, emp_id)
+    if e is None:
+        raise ValueError("员工不存在")
+    for k in ("name", "department", "position"):
+        if fields.get(k) is not None:
+            setattr(e, k, fields[k])
+    for k in ("base_salary", "insurance", "housing_fund"):
+        if fields.get(k) is not None:
+            setattr(e, k, Decimal(str(fields[k])))
+    session.flush()
+    return {"id": e.id, "name": e.name}

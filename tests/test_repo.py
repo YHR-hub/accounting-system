@@ -148,3 +148,50 @@ def test_voucher_detail_account_and_trial_balance(engine):
         tb = repo.trial_balance_data(s)
         assert tb["balanced"] is True
         assert tb["total_debit"] == tb["total_credit"]
+
+
+def test_aging_pnl_deactivate_update(engine):
+    import datetime as _dt
+    repo.bootstrap(engine)
+    with Session(engine) as s:
+        # 应收账龄：今天的一笔 1122 借方 500
+        v = Voucher(voucher_no="记-2026-06-9001", date=_dt.date.today().isoformat(),
+                    summary="应收", fiscal_year=2026, fiscal_month=6)
+        s.add(v); s.flush()
+        s.add(JournalEntry(voucher_id=v.id, account_code="1122", debit=Decimal("500"), credit=Decimal("0")))
+        s.add(JournalEntry(voucher_id=v.id, account_code="6001", debit=Decimal("0"), credit=Decimal("500")))
+        s.commit()
+        aging = repo.aging_data(s)
+        assert aging["receivable"]["0-30天"] == 500.0
+
+        # 项目损益
+        repo.add_project(s, "PRJX", "专项X", budget=10000)
+        s.commit()
+        v2 = Voucher(voucher_no="记-2026-06-9002", date="2026-06-02", summary="专项X收入",
+                     fiscal_year=2026, fiscal_month=6)
+        s.add(v2); s.flush()
+        s.add(JournalEntry(voucher_id=v2.id, account_code="6001", debit=Decimal("0"), credit=Decimal("1000")))
+        s.add(JournalEntry(voucher_id=v2.id, account_code="1002", debit=Decimal("1000"), credit=Decimal("0")))
+        s.commit()
+        pnls = repo.all_projects_pnl(s)
+        px = next(p for p in pnls if p["code"] == "PRJX")
+        assert px["income"] == 1000.0 and px["profit"] == 1000.0
+
+        # 预算执行返回列表
+        assert isinstance(repo.budget_execution(s, 2026), list)
+
+        # 科目停用
+        repo.add_account(s, "7777", "待停用", "asset")
+        s.commit()
+        repo.deactivate_account(s, "7777")
+        s.commit()
+        assert not any(a["code"] == "7777" for a in repo.load_accounts(s))
+
+        # 员工编辑
+        repo.add_employee(s, "EUP", "原名", base_salary=5000)
+        s.commit()
+        repo.update_employee(s, next(e["id"] for e in repo.list_employees(s) if e["code"] == "EUP"),
+                             name="新名", base_salary=8000)
+        s.commit()
+        emp = next(e for e in repo.list_employees(s) if e["code"] == "EUP")
+        assert emp["name"] == "新名" and emp["base_salary"] == 8000.0

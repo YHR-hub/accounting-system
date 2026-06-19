@@ -225,3 +225,36 @@ def test_create_account_auth_and_flow():
     assert r.status_code == 201, r.text
     assert client.post("/api/accounts", headers=h,
                        json={"code": code, "name": "重复", "category": "asset"}).status_code == 400
+
+
+def test_aging_budget_projects_pnl():
+    a = client.get("/api/aging")
+    assert a.status_code == 200 and "receivable" in a.json() and "payable" in a.json()
+    assert client.get("/api/budgets/execution").status_code == 200
+    assert isinstance(client.get("/api/projects/pnl").json(), list)
+
+
+def test_export_excel():
+    r = client.get("/api/reports/export.xlsx")
+    assert r.status_code == 200
+    assert "spreadsheet" in r.headers["content-type"]
+    assert len(r.content) > 0
+
+
+def test_deactivate_account():
+    assert client.post("/api/accounts/9999/deactivate").status_code == 401
+    h = _auth_header("admin", "admin123")
+    code = _uniq("8")
+    client.post("/api/accounts", headers=h, json={"code": code, "name": "临时", "category": "asset"})
+    assert client.post(f"/api/accounts/{code}/deactivate", headers=h).status_code == 200
+    assert client.post("/api/accounts/nonexist123/deactivate", headers=h).status_code == 404
+
+
+def test_update_employee():
+    h = _auth_header("admin", "admin123")
+    code = _uniq("E")
+    r = client.post("/api/employees", headers=h, json={"code": code, "name": "原名", "base_salary": 5000})
+    assert r.status_code == 201, r.text
+    eid = r.json()["id"]
+    assert client.put(f"/api/employees/{eid}", json={"name": "改名"}).status_code == 401
+    assert client.put(f"/api/employees/{eid}", headers=h, json={"name": "改名", "base_salary": 9000}).status_code == 200

@@ -8,11 +8,12 @@
 """
 from __future__ import annotations
 
+import io
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -27,6 +28,7 @@ from .schemas import (
     AccountCreate,
     AccountOut,
     EmployeeCreate,
+    EmployeeUpdate,
     FixedAssetCreate,
     Health,
     InventoryMove,
@@ -379,3 +381,77 @@ def create_account(a: AccountCreate, db: Session = Depends(get_db),
 @app.get("/api/reports/trial-balance", tags=["报表"])
 def report_trial_balance(db: Session = Depends(get_db)):
     return repo.trial_balance_data(db)
+
+
+# ── 账龄 / 预算执行 / 项目损益 ────────────────────────
+@app.get("/api/aging", tags=["应收应付"])
+def aging(db: Session = Depends(get_db)):
+    return repo.aging_data(db)
+
+
+@app.get("/api/budgets/execution", tags=["预算"])
+def budget_execution(year: int = Query(2026), db: Session = Depends(get_db)):
+    return repo.budget_execution(db, year)
+
+
+@app.get("/api/projects/pnl", tags=["项目"])
+def projects_pnl(db: Session = Depends(get_db)):
+    return repo.all_projects_pnl(db)
+
+
+# ── 编辑操作（需 accountant / admin） ─────────────────
+@app.post("/api/accounts/{code}/deactivate", tags=["科目"])
+def deactivate_account(code: str, db: Session = Depends(get_db),
+                       user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.deactivate_account(db, code)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return _commit(db, r)
+
+
+@app.put("/api/employees/{emp_id}", tags=["薪资"])
+def update_employee(emp_id: int, body: EmployeeUpdate, db: Session = Depends(get_db),
+                    user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.update_employee(db, emp_id, **body.model_dump(exclude_none=True))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return _commit(db, r)
+
+
+# ── 报表导出 Excel ───────────────────────────────────
+@app.get("/api/reports/export.xlsx", tags=["报表"])
+def export_excel(db: Session = Depends(get_db)):
+    import openpyxl
+    from openpyxl.styles import Font
+
+    wb = openpyxl.Workbook()
+
+    def fill(ws, headers, rows):
+        ws.append(headers)
+        for c in ws[1]:
+            c.font = Font(bold=True)
+        for r in rows:
+            ws.append(r)
+
+    ws1 = wb.active
+    ws1.title = "试算平衡表"
+    tb = repo.trial_balance_data(db)
+    fill(ws1, ["编码", "科目", "借方", "贷方"],
+         [[r["code"], r["name"], r["debit"], r["credit"]] for r in tb["rows"]])
+    ws1.append(["合计", "", tb["total_debit"], tb["total_credit"]])
+
+    ws2 = wb.create_sheet("资产负债表")
+    fill(ws2, ["项目", "金额"], [[r["label"], r["amount"]] for r in repo.balance_sheet_data(db)])
+
+    ws3 = wb.create_sheet("利润表")
+    fill(ws3, ["项目", "金额"], [[r["label"], r["amount"]] for r in repo.income_statement_data(db)])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=report.xlsx"},
+    )

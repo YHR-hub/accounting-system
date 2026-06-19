@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Tabs, Spin, Tag } from 'antd'
+import { Card, Table, Tabs, Spin, Tag, Button } from 'antd'
 import { api, type ReportRow, type TrialBalance } from '../api'
 
 const money = (v: number) =>
@@ -71,7 +71,7 @@ export default function Reports() {
   if (loading) return <Spin />
 
   return (
-    <Card>
+    <Card extra={<Button onClick={() => window.open(api.exportExcelUrl)}>导出 Excel</Button>}>
       <Tabs
         items={[
           { key: 'bs', label: '资产负债表', children: <Rows rows={bs} /> },

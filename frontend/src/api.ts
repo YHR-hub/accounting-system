@@ -190,6 +190,24 @@ export interface TrialBalance {
   total_credit: number
   balanced: boolean
 }
+export interface AgingData {
+  receivable: Record<string, number>
+  payable: Record<string, number>
+}
+export interface ProjectPnl {
+  id: number
+  code: string
+  name: string
+  budget: number
+  income: number
+  expense: number
+  profit: number
+}
+export interface BudgetExec extends Budget {
+  account_name: string
+  actual: number
+  execution_rate: number
+}
 
 export const api = {
   login: (username: string, password: string) =>
@@ -237,4 +255,12 @@ export const api = {
   addAccount: (body: Record<string, unknown>) =>
     http.post('/api/accounts', body).then((r) => r.data),
   trialBalance: () => http.get<TrialBalance>('/api/reports/trial-balance').then((r) => r.data),
+  aging: () => http.get<AgingData>('/api/aging').then((r) => r.data),
+  budgetExecution: (year: number) =>
+    http.get<BudgetExec[]>('/api/budgets/execution', { params: { year } }).then((r) => r.data),
+  projectsPnl: () => http.get<ProjectPnl[]>('/api/projects/pnl').then((r) => r.data),
+  deactivateAccount: (code: string) => http.post(`/api/accounts/${code}/deactivate`),
+  updateEmployee: (id: number, body: Record<string, unknown>) =>
+    http.put(`/api/employees/${id}`, body),
+  exportExcelUrl: '/api/reports/export.xlsx',
 }

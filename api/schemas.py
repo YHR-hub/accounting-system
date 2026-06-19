@@ -147,3 +147,12 @@ class AccountCreate(BaseModel):
     category: str
     nature: Optional[str] = None
     parent: str = ""
+
+
+class EmployeeUpdate(BaseModel):
+    name: Optional[str] = None
+    department: Optional[str] = None
+    position: Optional[str] = None
+    base_salary: Optional[float] = None
+    insurance: Optional[float] = None
+    housing_fund: Optional[float] = None

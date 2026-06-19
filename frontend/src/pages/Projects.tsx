@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Tag, Spin, Button, Modal, Form, Input, InputNumber, DatePicker, message } from 'antd'
-import { api, type Project } from '../api'
+import { api, type Project, type ProjectPnl } from '../api'
 import { useAuth } from '../auth'
 
 const money = (v: number) =>
@@ -16,13 +16,19 @@ export default function Projects() {
   const { user } = useAuth()
   const canWrite = user?.role === 'admin' || user?.role === 'accountant'
   const [rows, setRows] = useState<Project[]>([])
+  const [pnl, setPnl] = useState<Record<number, ProjectPnl>>({})
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [form] = Form.useForm()
 
   const load = () => {
     setLoading(true)
-    api.projects().then(setRows).finally(() => setLoading(false))
+    Promise.all([api.projects(), api.projectsPnl()])
+      .then(([ps, pls]) => {
+        setRows(ps)
+        setPnl(Object.fromEntries(pls.map((p) => [p.id, p])))
+      })
+      .finally(() => setLoading(false))
   }
   useEffect(load, [])
 
@@ -58,8 +64,17 @@ export default function Projects() {
           { title: '编码', dataIndex: 'code', width: 120 },
           { title: '名称', dataIndex: 'name' },
           { title: '预算', dataIndex: 'budget', align: 'right', render: (v: number) => money(v) },
-          { title: '开始', dataIndex: 'start_date' },
-          { title: '结束', dataIndex: 'end_date' },
+          { title: '收入', key: 'income', align: 'right', render: (_: any, r: Project) => money(pnl[r.id]?.income || 0) },
+          { title: '支出', key: 'expense', align: 'right', render: (_: any, r: Project) => money(pnl[r.id]?.expense || 0) },
+          {
+            title: '利润',
+            key: 'profit',
+            align: 'right',
+            render: (_: any, r: Project) => {
+              const v = pnl[r.id]?.profit || 0
+              return <span style={{ color: v >= 0 ? '#00b894' : '#d63031' }}>{money(v)}</span>
+            },
+          },
           {
             title: '状态',
             dataIndex: 'status',

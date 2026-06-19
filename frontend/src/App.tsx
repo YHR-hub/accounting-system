@@ -13,6 +13,7 @@ import {
   FundOutlined,
   AlertOutlined,
   GlobalOutlined,
+  AccountBookOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu, Button, Typography } from 'antd'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
@@ -31,6 +32,7 @@ import Payroll from './pages/Payroll'
 import Budgets from './pages/Budgets'
 import Alerts from './pages/Alerts'
 import ESG from './pages/ESG'
+import Aging from './pages/Aging'
 
 const { Header, Sider, Content } = Layout
 
@@ -48,6 +50,7 @@ function Shell() {
     { key: '/employees', icon: <TeamOutlined />, label: '员工' },
     { key: '/assets', icon: <GoldOutlined />, label: '固定资产' },
     { key: '/projects', icon: <ProjectOutlined />, label: '项目' },
+    { key: '/aging', icon: <AccountBookOutlined />, label: '应收应付' },
     { key: '/payroll', icon: <MoneyCollectOutlined />, label: '薪资' },
     { key: '/budgets', icon: <FundOutlined />, label: '预算' },
     { key: '/alerts', icon: <AlertOutlined />, label: '预警' },
@@ -103,6 +106,7 @@ function Shell() {
             <Route path="/employees" element={<Employees />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/aging" element={<Aging />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/alerts" element={<Alerts />} />
