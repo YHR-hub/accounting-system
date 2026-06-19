@@ -16,7 +16,24 @@ from sqlalchemy.orm import Session
 
 from .constants import DEFAULT_ACCOUNTS
 from .db import Base
-from .models import Account, JournalEntry, OpeningBalance, User, Voucher
+from .models import (
+    Account,
+    AlertHistory,
+    AlertRule,
+    AuditLog,
+    Budget,
+    Employee,
+    EsgData,
+    FixedAsset,
+    InventoryTransaction,
+    JournalEntry,
+    OpeningBalance,
+    PayrollRecord,
+    Product,
+    Project,
+    User,
+    Voucher,
+)
 
 ZERO = Decimal("0")
 
@@ -315,3 +332,140 @@ def next_voucher_no(session: Session, year: int, month: int) -> str:
     ).scalar_one_or_none()
     seq = int(last.split("-")[-1]) + 1 if last else 1
     return f"记-{year}-{month:02d}-{seq:04d}"
+
+
+# ── 其他模块（只读列表，纯 ORM） ─────────────────────
+def _f(x) -> float:
+    try:
+        return float(x) if x is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _s(x):
+    return x.isoformat() if hasattr(x, "isoformat") else x
+
+
+def list_products(session: Session) -> List[dict]:
+    rows = session.execute(
+        select(Product).where(Product.is_active == 1).order_by(Product.code)
+    ).scalars().all()
+    return [{
+        "id": p.id, "code": p.code, "name": p.name, "category": p.category,
+        "unit": p.unit, "unit_price": _f(p.unit_price), "quantity": _f(p.quantity),
+        "amount": round(_f(p.unit_price) * _f(p.quantity), 2),
+        "min_stock": _f(p.min_stock), "location": p.location,
+    } for p in rows]
+
+
+def list_inventory_transactions(session: Session, limit: int = 100) -> List[dict]:
+    rows = session.execute(
+        select(InventoryTransaction).order_by(InventoryTransaction.id.desc()).limit(limit)
+    ).scalars().all()
+    return [{
+        "id": t.id, "product_id": t.product_id, "trans_type": t.trans_type,
+        "quantity": _f(t.quantity), "unit_price": _f(t.unit_price),
+        "ref_type": t.ref_type, "ref_id": t.ref_id, "note": t.note,
+        "created_at": _s(t.created_at),
+    } for t in rows]
+
+
+def list_employees(session: Session) -> List[dict]:
+    rows = session.execute(
+        select(Employee).where(Employee.is_active == 1).order_by(Employee.code)
+    ).scalars().all()
+    return [{
+        "id": e.id, "code": e.code, "name": e.name, "department": e.department,
+        "position": e.position, "base_salary": _f(e.base_salary),
+        "insurance": _f(e.insurance), "housing_fund": _f(e.housing_fund),
+    } for e in rows]
+
+
+def list_payroll_records(session: Session, year: int | None = None, month: int | None = None) -> List[dict]:
+    stmt = select(PayrollRecord)
+    if year:
+        stmt = stmt.where(PayrollRecord.year == year)
+    if month:
+        stmt = stmt.where(PayrollRecord.month == month)
+    rows = session.execute(stmt.order_by(PayrollRecord.id.desc())).scalars().all()
+    return [{
+        "id": r.id, "employee_id": r.employee_id, "year": r.year, "month": r.month,
+        "gross_pay": _f(r.gross_pay), "income_tax": _f(r.income_tax),
+        "net_pay": _f(r.net_pay), "status": r.status,
+    } for r in rows]
+
+
+def list_fixed_assets(session: Session) -> List[dict]:
+    rows = session.execute(
+        select(FixedAsset).where(FixedAsset.is_active == 1).order_by(FixedAsset.id)
+    ).scalars().all()
+    return [{
+        "id": a.id, "name": a.name, "original_value": _f(a.original_value),
+        "residual_value": _f(a.residual_value), "useful_life_months": a.useful_life_months,
+        "depreciation_method": a.depreciation_method, "purchase_date": a.purchase_date,
+        "accumulated_deprec": _f(a.accumulated_deprec),
+        "net_value": round(_f(a.original_value) - _f(a.accumulated_deprec), 2),
+    } for a in rows]
+
+
+def list_projects(session: Session) -> List[dict]:
+    rows = session.execute(select(Project).order_by(Project.code)).scalars().all()
+    return [{
+        "id": p.id, "code": p.code, "name": p.name, "budget": _f(p.budget),
+        "start_date": p.start_date, "end_date": p.end_date, "status": p.status,
+    } for p in rows]
+
+
+def list_budgets(session: Session, year: int | None = None) -> List[dict]:
+    stmt = select(Budget)
+    if year:
+        stmt = stmt.where(Budget.fiscal_year == year)
+    rows = session.execute(
+        stmt.order_by(Budget.account_code, Budget.fiscal_month)
+    ).scalars().all()
+    return [{
+        "id": b.id, "account_code": b.account_code, "fiscal_year": b.fiscal_year,
+        "fiscal_month": b.fiscal_month, "budget_amount": _f(b.budget_amount), "note": b.note,
+    } for b in rows]
+
+
+def list_alert_rules(session: Session) -> List[dict]:
+    rows = session.execute(select(AlertRule).order_by(AlertRule.id)).scalars().all()
+    return [{
+        "id": r.id, "name": r.name, "indicator": r.indicator, "operator": r.operator,
+        "threshold": _f(r.threshold), "enabled": r.enabled, "level": r.level,
+    } for r in rows]
+
+
+def list_alert_history(session: Session, limit: int = 100) -> List[dict]:
+    rows = session.execute(
+        select(AlertHistory).order_by(AlertHistory.id.desc()).limit(limit)
+    ).scalars().all()
+    return [{
+        "id": h.id, "rule_id": h.rule_id, "message": h.message, "level": h.level,
+        "resolved": h.resolved, "created_at": _s(h.created_at),
+    } for h in rows]
+
+
+def list_audit_logs(session: Session, limit: int = 100) -> List[dict]:
+    rows = session.execute(
+        select(AuditLog).order_by(AuditLog.id.desc()).limit(limit)
+    ).scalars().all()
+    return [{
+        "id": a.id, "username": a.username, "action": a.action,
+        "target_type": a.target_type, "target_id": a.target_id, "detail": a.detail,
+        "created_at": _s(a.created_at),
+    } for a in rows]
+
+
+def list_esg_data(session: Session, year: int | None = None) -> List[dict]:
+    stmt = select(EsgData)
+    if year:
+        stmt = stmt.where(EsgData.year == year)
+    rows = session.execute(
+        stmt.order_by(EsgData.category, EsgData.indicator)
+    ).scalars().all()
+    return [{
+        "id": d.id, "category": d.category, "year": d.year, "month": d.month,
+        "indicator": d.indicator, "value": _f(d.value), "unit": d.unit, "note": d.note,
+    } for d in rows]

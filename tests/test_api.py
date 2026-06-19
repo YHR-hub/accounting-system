@@ -135,3 +135,22 @@ def test_create_and_delete_voucher():
     vid = r.json()["id"]
     assert r.json()["voucher_no"].startswith("记-")
     assert client.delete(f"/api/vouchers/{vid}", headers=h).status_code == 204
+
+
+@pytest.mark.parametrize("path", [
+    "/api/inventory/products",
+    "/api/inventory/transactions",
+    "/api/employees",
+    "/api/payroll",
+    "/api/assets",
+    "/api/projects",
+    "/api/budgets",
+    "/api/alerts/rules",
+    "/api/alerts/history",
+    "/api/audit",
+    "/api/esg",
+])
+def test_module_list_endpoints(path):
+    r = client.get(path)
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)

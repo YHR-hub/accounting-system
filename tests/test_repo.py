@@ -56,3 +56,29 @@ def test_voucher_no_and_balances_and_reports(engine):
 
         ratios = repo.financial_ratios(s)
         assert "毛利率" in ratios and "净利率" in ratios
+
+
+def test_module_list_functions_with_data(engine):
+    repo.bootstrap(engine)
+    from accsys.models import Employee, FixedAsset, Product
+
+    with Session(engine) as s:
+        s.add(Product(code="P001", name="测试商品", unit="个",
+                      unit_price=Decimal("10"), quantity=Decimal("5"), is_active=1))
+        s.add(Employee(code="E001", name="张三", department="技术部",
+                       base_salary=Decimal("15000"), is_active=1))
+        s.add(FixedAsset(name="服务器", original_value=Decimal("100000"),
+                         residual_value=Decimal("0"), useful_life_months=60,
+                         depreciation_method="straight", purchase_date="2026-01-01",
+                         accumulated_deprec=Decimal("20000"), is_active=1))
+        s.commit()
+
+        products = repo.list_products(s)
+        assert len(products) == 1
+        assert products[0]["amount"] == 50.0
+
+        employees = repo.list_employees(s)
+        assert len(employees) == 1 and employees[0]["name"] == "张三"
+
+        assets = repo.list_fixed_assets(s)
+        assert len(assets) == 1 and assets[0]["net_value"] == 80000.0

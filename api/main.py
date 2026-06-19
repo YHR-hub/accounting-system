@@ -212,3 +212,63 @@ def delete_voucher(
     db.delete(voucher)
     db.commit()
     return None
+
+
+# ── 其他模块（只读列表） ─────────────────────────────
+@app.get("/api/inventory/products", tags=["库存"])
+def inventory_products(db: Session = Depends(get_db)):
+    return repo.list_products(db)
+
+
+@app.get("/api/inventory/transactions", tags=["库存"])
+def inventory_transactions(limit: int = Query(100, ge=1, le=500), db: Session = Depends(get_db)):
+    return repo.list_inventory_transactions(db, limit)
+
+
+@app.get("/api/employees", tags=["薪资"])
+def employees(db: Session = Depends(get_db)):
+    return repo.list_employees(db)
+
+
+@app.get("/api/payroll", tags=["薪资"])
+def payroll(
+    year: int = Query(0, ge=0),
+    month: int = Query(0, ge=0, le=12),
+    db: Session = Depends(get_db),
+):
+    return repo.list_payroll_records(db, year or None, month or None)
+
+
+@app.get("/api/assets", tags=["固定资产"])
+def fixed_assets(db: Session = Depends(get_db)):
+    return repo.list_fixed_assets(db)
+
+
+@app.get("/api/projects", tags=["项目"])
+def projects(db: Session = Depends(get_db)):
+    return repo.list_projects(db)
+
+
+@app.get("/api/budgets", tags=["预算"])
+def budgets(year: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    return repo.list_budgets(db, year or None)
+
+
+@app.get("/api/alerts/rules", tags=["预警"])
+def alert_rules(db: Session = Depends(get_db)):
+    return repo.list_alert_rules(db)
+
+
+@app.get("/api/alerts/history", tags=["预警"])
+def alert_history(limit: int = Query(100, ge=1, le=500), db: Session = Depends(get_db)):
+    return repo.list_alert_history(db, limit)
+
+
+@app.get("/api/audit", tags=["审计"])
+def audit_logs(limit: int = Query(100, ge=1, le=500), db: Session = Depends(get_db)):
+    return repo.list_audit_logs(db, limit)
+
+
+@app.get("/api/esg", tags=["ESG"])
+def esg(year: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    return repo.list_esg_data(db, year or None)
