@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Dict, List
 
-from fastapi import Depends, FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -20,13 +21,27 @@ import accsys as acc
 from accsys.db import SessionLocal, get_database_url
 from accsys.models import JournalEntry, Voucher
 
-from .schemas import AccountOut, Health, PitResult, ReportRow, VatResult, VoucherOut
+from .auth import create_access_token, get_current_user, require_roles, verify_user
+from .schemas import (
+    AccountOut,
+    Health,
+    LoginRequest,
+    PitResult,
+    ReportRow,
+    TokenResponse,
+    UserOut,
+    VatResult,
+    VoucherCreate,
+    VoucherCreated,
+    VoucherOut,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     acc.init_db()
     acc.ensure_accounts()
+    acc.init_users()
     yield
 
 
@@ -131,3 +146,70 @@ def tax_vat(revenue: float = Query(..., gt=0), rate: float = Query(0.13)):
 @app.get("/api/tax/pit", response_model=PitResult, tags=["税务"])
 def tax_pit(income: float = Query(..., description="月应纳税所得额")):
     return acc.compute_pit(income)
+
+
+# ── 鉴权 ────────────────────────────────────────────
+@app.post("/api/auth/login", response_model=TokenResponse, tags=["鉴权"])
+def login(payload: LoginRequest):
+    user = verify_user(payload.username, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    return TokenResponse(access_token=create_access_token(user), user=UserOut(**user))
+
+
+@app.get("/api/auth/me", response_model=UserOut, tags=["鉴权"])
+def me(user: dict = Depends(get_current_user)):
+    return UserOut(**user)
+
+
+# ── 凭证写入（需 accountant / admin 角色） ─────────────
+@app.post("/api/vouchers", response_model=VoucherCreated, status_code=201, tags=["凭证"])
+def create_voucher(
+    payload: VoucherCreate,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_roles("admin", "accountant")),
+):
+    if len(payload.entries) < 2:
+        raise HTTPException(status_code=400, detail="凭证至少需要两条分录")
+    for e in payload.entries:
+        if e.debit < 0 or e.credit < 0:
+            raise HTTPException(status_code=400, detail="借贷金额不能为负")
+    total_debit = round(sum(e.debit for e in payload.entries), 2)
+    total_credit = round(sum(e.credit for e in payload.entries), 2)
+    if total_debit <= 0:
+        raise HTTPException(status_code=400, detail="凭证金额必须大于 0")
+    if abs(total_debit - total_credit) > 0.01:
+        raise HTTPException(status_code=400, detail=f"借贷不平：借方 {total_debit} ≠ 贷方 {total_credit}")
+    try:
+        dt = datetime.strptime(payload.date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式应为 YYYY-MM-DD")
+
+    v_no = acc.next_voucher_no(dt.year, dt.month)
+    voucher = Voucher(
+        voucher_no=v_no, date=payload.date, summary=payload.summary,
+        fiscal_year=dt.year, fiscal_month=dt.month,
+    )
+    db.add(voucher)
+    db.flush()
+    for e in payload.entries:
+        db.add(JournalEntry(
+            voucher_id=voucher.id, account_code=e.account_code,
+            debit=e.debit, credit=e.credit,
+        ))
+    db.commit()
+    return VoucherCreated(id=voucher.id, voucher_no=v_no)
+
+
+@app.delete("/api/vouchers/{voucher_id}", status_code=204, tags=["凭证"])
+def delete_voucher(
+    voucher_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_roles("admin", "accountant")),
+):
+    voucher = db.get(Voucher, voucher_id)
+    if voucher is None:
+        raise HTTPException(status_code=404, detail="凭证不存在")
+    db.delete(voucher)
+    db.commit()
+    return None

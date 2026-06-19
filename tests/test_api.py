@@ -77,3 +77,61 @@ def test_openapi_schema():
     r = client.get("/openapi.json")
     assert r.status_code == 200
     assert "paths" in r.json()
+
+
+def _auth_header(username, password):
+    r = client.post("/api/auth/login", json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def test_login_wrong_password():
+    r = client.post("/api/auth/login", json={"username": "admin", "password": "nope"})
+    assert r.status_code == 401
+
+
+def test_login_and_me():
+    h = _auth_header("admin", "admin123")
+    r = client.get("/api/auth/me", headers=h)
+    assert r.status_code == 200
+    assert r.json()["role"] == "admin"
+
+
+def test_me_without_token():
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def _balanced_payload():
+    return {
+        "date": "2026-06-10",
+        "summary": "API测试凭证",
+        "entries": [
+            {"account_code": "1002", "debit": 100, "credit": 0},
+            {"account_code": "6001", "debit": 0, "credit": 100},
+        ],
+    }
+
+
+def test_create_requires_auth():
+    assert client.post("/api/vouchers", json=_balanced_payload()).status_code == 401
+
+
+def test_viewer_cannot_create():
+    h = _auth_header("viewer", "view123")
+    assert client.post("/api/vouchers", headers=h, json=_balanced_payload()).status_code == 403
+
+
+def test_create_unbalanced_rejected():
+    h = _auth_header("admin", "admin123")
+    bad = _balanced_payload()
+    bad["entries"][1]["credit"] = 90
+    assert client.post("/api/vouchers", headers=h, json=bad).status_code == 400
+
+
+def test_create_and_delete_voucher():
+    h = _auth_header("admin", "admin123")
+    r = client.post("/api/vouchers", headers=h, json=_balanced_payload())
+    assert r.status_code == 201, r.text
+    vid = r.json()["id"]
+    assert r.json()["voucher_no"].startswith("记-")
+    assert client.delete(f"/api/vouchers/{vid}", headers=h).status_code == 204

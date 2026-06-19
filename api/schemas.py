@@ -56,3 +56,37 @@ class PitResult(BaseModel):
     total_tax: float
     after_tax: float
     brackets: List[PitBracket]
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserOut(BaseModel):
+    username: str
+    role: str
+    display_name: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+
+class EntryIn(BaseModel):
+    account_code: str
+    debit: float = 0.0
+    credit: float = 0.0
+
+
+class VoucherCreate(BaseModel):
+    date: str
+    summary: str
+    entries: List[EntryIn]
+
+
+class VoucherCreated(BaseModel):
+    id: int
+    voucher_no: str
