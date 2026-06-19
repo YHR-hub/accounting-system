@@ -340,6 +340,29 @@ class TestReports:
         result = acc.reports.detect_anomalies()
         assert isinstance(result, list)
 
+    def test_balance_sheet_data_structure(self):
+        rows = acc.reports.balance_sheet_data()
+        assert isinstance(rows, list) and rows
+        for r in rows:
+            assert 'label' in r and 'amount' in r
+            assert isinstance(r['amount'], float)
+        labels = [r['label'] for r in rows]
+        assert '资产总计' in labels
+        assert '负债及所有者权益总计' in labels
+
+    def test_income_statement_data_values(self):
+        rows = acc.reports.income_statement_data()
+        m = {r['label']: r['amount'] for r in rows}
+        assert m['一、营业收入'] == 50000.0
+        assert m['二、营业成本及费用'] == 20000.0
+        assert m['四、净利润'] == 30000.0
+
+    def test_cash_flow_statement_data_structure(self):
+        rows = acc.reports.cash_flow_statement_data()
+        assert len(rows) == 4
+        for r in rows:
+            assert 'label' in r and isinstance(r['amount'], float)
+
 
 # ── 4. Fixed Assets ───────────────────────────────────────────────────────
 

@@ -58,8 +58,8 @@ def index():
     balances = acc.calc_balances(accts)
     vouchers = _list_vouchers(2026, 0)
     alerts = acc.check_alerts() or []
-    total_assets = sum(float(b.get("balance",0)) for b in balances.values() if b.get("category")=="asset")
-    total_liab = sum(float(b.get("balance",0)) for b in balances.values() if b.get("category")=="liability")
+    total_assets = sum(float(balances.get(a["code"], 0)) for a in accts if a["category"] == "asset")
+    total_liab = sum(float(balances.get(a["code"], 0)) for a in accts if a["category"] == "liability")
     equity = total_assets - total_liab
 
     # KPI cards
@@ -76,7 +76,10 @@ def index():
 
     # Alerts
     if alerts:
-        alert_html = f'<div class="col card"><h2>预警 ({len(alerts)})</h2>{"".join(f"<p><span class='tag tr'>{a['rule']}</span> {a['message']}</p>" for a in alerts)}</div>'
+        alert_items = "".join(
+            f"<p><span class='tag tr'>{a['rule']}</span> {a['message']}</p>" for a in alerts
+        )
+        alert_html = f'<div class="col card"><h2>预警 ({len(alerts)})</h2>{alert_items}</div>'
     else:
         alert_html = '<div class="col card"><h2>预警</h2><p style="color:#636e72">正常</p></div>'
 
@@ -119,17 +122,28 @@ def vouchers():
 
 
 # ── 科目余额 ────────────────────────────────────────
+def _movements():
+    """返回 {account_code: (借方发生额, 贷方发生额)}。"""
+    conn = acc.get_conn()
+    rows = conn.execute(
+        "SELECT account_code, COALESCE(SUM(debit),0) d, COALESCE(SUM(credit),0) c"
+        " FROM journal_entries GROUP BY account_code"
+    ).fetchall()
+    conn.close()
+    return {r["account_code"]: (float(r["d"]), float(r["c"])) for r in rows}
+
+
 @app.route("/accounts")
 def accounts():
     accts = acc.load_accounts_from_db()
     balances = acc.calc_balances(accts)
+    mv = _movements()
     cat_map = {"asset":"资产","liability":"负债","equity":"权益","income":"收入","expense":"费用"}
     rows = []
     for a in accts:
-        b = balances.get(a["code"], {})
+        dt, ct = mv.get(a["code"], (0.0, 0.0))
         rows.append((a["code"], a["name"], a["category"],
-                     float(b.get("debit_total",0)), float(b.get("credit_total",0)),
-                     float(b.get("balance",0))))
+                     dt, ct, float(balances.get(a["code"], 0))))
     row_html = "".join(
         f'<tr><td>{c}</td><td>{n}</td><td><span class="tag tb">{cat_map.get(cat,cat)}</span></td>'
         f'<td class="mono">{dt:,.2f}</td><td class="mono">{ct:,.2f}</td><td class="mono">{bal:,.2f}</td></tr>'
@@ -142,9 +156,9 @@ def accounts():
 # ── 报表 ───────────────────────────────────────────
 @app.route("/reports")
 def reports():
-    bs = acc.balance_sheet()
-    inc = acc.income_statement()
-    cf = acc.cash_flow_statement()
+    bs = acc.balance_sheet_data()
+    inc = acc.income_statement_data()
+    cf = acc.cash_flow_statement_data()
 
     def tbl(rows):
         return "".join(f'<tr><td>{r["label"]}</td><td class="mono">{r["amount"]:,.2f}</td></tr>' for r in rows)
@@ -171,23 +185,28 @@ def api_vouchers():
 def api_accounts():
     accts = acc.load_accounts_from_db()
     balances = acc.calc_balances(accts)
+    mv = _movements()
     result = []
     for a in accts:
-        b = balances.get(a["code"], {})
+        dt, ct = mv.get(a["code"], (0.0, 0.0))
         result.append({
             "code": a["code"], "name": a["name"], "category": a["category"],
-            "debit": float(b.get("debit_total", 0)), "credit": float(b.get("credit_total", 0)),
-            "balance": float(b.get("balance", 0))
+            "debit": dt, "credit": ct,
+            "balance": float(balances.get(a["code"], 0))
         })
     return jsonify(result)
 
 @app.route("/api/reports/balance")
 def api_balance():
-    return jsonify(acc.balance_sheet())
+    return jsonify(acc.balance_sheet_data())
 
 @app.route("/api/reports/income")
 def api_income():
-    return jsonify(acc.income_statement())
+    return jsonify(acc.income_statement_data())
+
+@app.route("/api/reports/cashflow")
+def api_cashflow():
+    return jsonify(acc.cash_flow_statement_data())
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from .accounts import calc_balances, show_trial_balance, set_opening_balance, ge
 from .aging import aging_analysis, get_total_ar_ap
 from .vouchers import next_voucher_no, create_voucher, show_voucher, list_vouchers, view_voucher_detail, batch_export_vouchers, batch_export_csv, import_vouchers, _import_csv
 from .blockchain import init_blockchain, get_chain_length, get_block_by_index, get_chain, _mine_block, add_voucher_to_chain, add_all_vouchers_to_chain, validate_chain, get_chain_stats, export_chain_json, import_chain_json
-from .reports import balance_sheet, income_statement, cash_flow_statement, export_excel, _style_header, _style_row, _excel_trial_balance, _excel_balance_sheet, _excel_income_statement, calc_financial_ratios, detect_anomalies, get_smart_suggestions, get_trend_data, predict_next_month, get_template_names, apply_voucher_template
+from .reports import balance_sheet, income_statement, cash_flow_statement, balance_sheet_data, income_statement_data, cash_flow_statement_data, export_excel, _style_header, _style_row, _excel_trial_balance, _excel_balance_sheet, _excel_income_statement, calc_financial_ratios, detect_anomalies, get_smart_suggestions, get_trend_data, predict_next_month, get_template_names, apply_voucher_template
 from .period import auto_close_period, ensure_period_table, get_period_status, close_period, get_close_log
 from .assets import add_fixed_asset, calc_depreciation, list_fixed_assets, run_depreciation
 from .currency import fetch_exchange_rates, show_exchange_rates, manual_exchange_rate

@@ -234,6 +234,141 @@ def cash_flow_statement() -> None:
     print(f"{'=' * 56}")
 
 
+def balance_sheet_data() -> List[Dict[str, Any]]:
+    """资产负债表结构化数据（供 Web/API 使用），返回 [{label, amount}] 行列表。"""
+    accounts = load_accounts_from_db()
+    balances = calc_balances(accounts)
+
+    assets: List[Tuple[str, Decimal]] = []
+    liabilities: List[Tuple[str, Decimal]] = []
+    equities: List[Tuple[str, Decimal]] = []
+    for a in accounts:
+        bal = balances.get(a['code'], Decimal('0'))
+        if a['category'] == 'asset':
+            assets.append((a['name'], -bal if a['is_contra'] else bal))
+        elif a['category'] == 'liability':
+            liabilities.append((a['name'], bal))
+        elif a['category'] == 'equity':
+            equities.append((a['name'], bal))
+
+    income_acc = [a for a in accounts if a['category'] == 'income']
+    expense_acc = [a for a in accounts if a['category'] == 'expense']
+    total_income = sum(balances.get(a['code'], Decimal('0')) for a in income_acc)
+    total_expense = sum(balances.get(a['code'], Decimal('0')) for a in expense_acc)
+    net_profit = total_income - total_expense
+
+    total_asset = sum((abs(b) for _, b in assets), Decimal('0'))
+    total_liability = sum((b for _, b in liabilities), Decimal('0'))
+    total_equity = sum((b for _, b in equities), Decimal('0')) + max(net_profit, Decimal('0'))
+
+    rows: List[Dict[str, Any]] = []
+    for name, b in assets:
+        rows.append({'label': name, 'amount': float(b), 'section': 'asset'})
+    rows.append({'label': '资产总计', 'amount': float(total_asset), 'section': 'total'})
+    for name, b in liabilities:
+        rows.append({'label': name, 'amount': float(b), 'section': 'liability'})
+    rows.append({'label': '净利润(本年)', 'amount': float(net_profit), 'section': 'equity'})
+    for name, b in equities:
+        rows.append({'label': name, 'amount': float(b), 'section': 'equity'})
+    rows.append({'label': '负债及所有者权益总计',
+                 'amount': float(total_liability + total_equity), 'section': 'total'})
+    return rows
+
+
+def income_statement_data() -> List[Dict[str, Any]]:
+    """利润表结构化数据，返回 [{label, amount}] 行列表。"""
+    accounts = load_accounts_from_db()
+    balances = calc_balances(accounts)
+    income_acc = [a for a in accounts if a['category'] == 'income']
+    expense_acc = [a for a in accounts if a['category'] == 'expense']
+
+    operating_revenue = Decimal('0')
+    other_income = Decimal('0')
+    for a in income_acc:
+        bal = balances.get(a['code'], Decimal('0'))
+        if '收入' in a['name']:
+            operating_revenue += bal
+        else:
+            other_income += bal
+
+    operating_expense = sum(
+        (balances.get(a['code'], Decimal('0')) for a in expense_acc if a['code'] not in ('6801',)),
+        Decimal('0'),
+    )
+    tax_exp = balances.get('6801', Decimal('0')) if any(a['code'] == '6801' for a in expense_acc) else Decimal('0')
+
+    gross_profit = operating_revenue - operating_expense
+    net_profit = gross_profit + other_income - tax_exp
+
+    rows: List[Dict[str, Any]] = [
+        {'label': '一、营业收入', 'amount': float(operating_revenue)},
+        {'label': '二、营业成本及费用', 'amount': float(operating_expense)},
+        {'label': '三、营业利润', 'amount': float(gross_profit)},
+    ]
+    if other_income != 0:
+        rows.append({'label': '加：其他收益', 'amount': float(other_income)})
+    if tax_exp > 0:
+        rows.append({'label': '减：所得税费用', 'amount': float(tax_exp)})
+    rows.append({'label': '四、净利润', 'amount': float(net_profit)})
+    return rows
+
+
+def cash_flow_statement_data() -> List[Dict[str, Any]]:
+    """现金流量表（间接法）结构化数据，返回 [{label, amount}] 行列表。"""
+    accounts = load_accounts_from_db()
+    acc_dict = get_account_dict(accounts)
+
+    conn = get_conn()
+    rows_db = conn.execute("""
+        SELECT v.date, v.summary, je.account_code, je.debit, je.credit
+        FROM journal_entries je
+        JOIN vouchers v ON je.voucher_id = v.id
+        ORDER BY v.date
+    """).fetchall()
+    conn.close()
+
+    operating_inflow = operating_outflow = Decimal('0')
+    investing_inflow = investing_outflow = Decimal('0')
+    financing_inflow = financing_outflow = Decimal('0')
+
+    for r in rows_db:
+        code = r['account_code']
+        debit = Decimal(str(r['debit']))
+        credit = Decimal(str(r['credit']))
+        a = acc_dict.get(code)
+        if not a:
+            continue
+        cat = a['category']
+        if cat == 'income':
+            operating_inflow += credit
+        elif cat == 'expense':
+            if code in ('6602', '6601', '6401', '6402', '6405', '6603'):
+                operating_outflow += debit
+        elif code == '1002':
+            operating_inflow += credit
+            operating_outflow += debit
+        elif code == '1601':
+            investing_outflow += debit
+            investing_inflow += credit
+        elif code in ('2001', '2501'):
+            financing_inflow += credit
+            financing_outflow += debit
+        elif code == '4001':
+            financing_inflow += credit
+
+    operating_net = operating_inflow - operating_outflow
+    investing_net = investing_inflow - investing_outflow
+    financing_net = financing_inflow - financing_outflow
+    net_change = operating_net + investing_net + financing_net
+
+    return [
+        {'label': '一、经营活动现金流量净额', 'amount': float(operating_net)},
+        {'label': '二、投资活动现金流量净额', 'amount': float(investing_net)},
+        {'label': '三、筹资活动现金流量净额', 'amount': float(financing_net)},
+        {'label': '四、现金及现金等价物净增加额', 'amount': float(net_change)},
+    ]
+
+
 def export_excel() -> None:
     accounts = load_accounts_from_db()
     balances = calc_balances(accounts)
