@@ -8,6 +8,7 @@ __pycache__/
 *.xlsx
 *.json
 !科目表.json
+!frontend/**/*.json
 *.bak
 dist/
 build/

@@ -1,0 +1,43 @@
+# 会计系统专业版 — 容器化部署
+#
+# 一键启动：  docker compose up --build
+#   前端：    http://localhost:8080   （登录 admin/admin123）
+#   后端API： http://localhost:8000/docs
+#
+# 默认数据库为容器内 SQLite（演示用，重启后数据重置）。
+# 切换 PostgreSQL：取消下方 api.environment 中 DATABASE_URL 的注释。
+#   注意：现有部分业务函数仍直连 sqlite3，真正启用 Postgres 需先完成
+#   “阶段2b：数据层统一”（让 init_db / 报表 / calc_balances 等也走 DATABASE_URL）。
+
+services:
+  api:
+    build: .
+    environment:
+      JWT_SECRET: "change-me-in-production-please-32-bytes-min"
+      # DATABASE_URL: "postgresql+psycopg://acc:acc@db:5432/accounting"
+    ports:
+      - "8000:8000"
+    # depends_on:
+    #   - db        # 启用 Postgres 时取消注释
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+  # PostgreSQL 已就绪；完成阶段2b 后取消 api.DATABASE_URL 注释即可启用多用户并发。
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: acc
+      POSTGRES_PASSWORD: acc
+      POSTGRES_DB: accounting
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
