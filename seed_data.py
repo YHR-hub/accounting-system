@@ -221,7 +221,7 @@ esg_gov = [("board_size","董事会人数","5","2026"), ("independent","独董�
            ("privacy","数据安全事件","0","2026")]
 for cat, items in [("environment",esg_env),("social",esg_soc),("governance",esg_gov)]:
     for code, name, val, yr in items:
-        acc.upsert_esg_data(cat, code, name, str(val), int(yr))
+        acc.upsert_esg_data(category=cat, year=int(yr), indicator=code, value=val)
 
 print(f"\n 种子数据填充完成!")
 print(f"   公司: {COMPANY}")
