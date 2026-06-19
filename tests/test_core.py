@@ -516,6 +516,32 @@ class TestTaxPure:
         assert r['brackets'][-1]['rate'] == 0.45
         assert r['total_tax'] > 0
 
+class TestDataLayer:
+    def test_models_match_real_schema(self):
+        import sqlite3
+        from sqlalchemy import inspect as sa_inspect
+        from accsys.db import Base, make_engine
+        from accsys import models  # noqa: F401
+        from accsys.database import get_db_path
+
+        eng = make_engine('sqlite:///:memory:')
+        Base.metadata.create_all(eng)
+        created = set(sa_inspect(eng).get_table_names())
+        assert len(created) == 24
+
+        conn = sqlite3.connect(get_db_path())
+        real = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        conn.close()
+        real -= {'sqlite_sequence'}
+        assert set(Base.metadata.tables.keys()) == real
+
+    def test_get_database_url_default_sqlite(self):
+        import os
+        from accsys.db import get_database_url
+        if 'DATABASE_URL' not in os.environ:
+            assert get_database_url().startswith('sqlite:///')
+
+
 class TestPeriod:
     def test_get_period_status_open(self):
         status = acc.period.get_period_status(2026, 6)
