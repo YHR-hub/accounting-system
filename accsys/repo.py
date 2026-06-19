@@ -472,6 +472,36 @@ def list_esg_data(session: Session, year: int | None = None) -> List[dict]:
     } for d in rows]
 
 
+def list_vouchers(session: Session, year: int, month: int = 0) -> List[dict]:
+    totals = dict(session.execute(
+        select(JournalEntry.voucher_id, func.coalesce(func.sum(JournalEntry.debit), 0))
+        .group_by(JournalEntry.voucher_id)
+    ).all())
+    stmt = select(Voucher).where(Voucher.fiscal_year == year)
+    if month:
+        stmt = stmt.where(Voucher.fiscal_month == month)
+    stmt = stmt.order_by(Voucher.id.desc())
+    return [{
+        "id": v.id, "voucher_no": v.voucher_no, "date": v.date, "summary": v.summary,
+        "fiscal_year": v.fiscal_year, "fiscal_month": v.fiscal_month,
+        "total": float(totals.get(v.id, 0) or 0),
+    } for v in session.execute(stmt).scalars().all()]
+
+
+def list_accounts_with_movements(session: Session) -> List[dict]:
+    accts = load_accounts(session)
+    balances = calc_balances(session, accts)
+    mv = _movements(session)
+    out = []
+    for a in accts:
+        d, c = mv.get(a["code"], (ZERO, ZERO))
+        out.append({
+            "code": a["code"], "name": a["name"], "category": a["category"],
+            "debit": float(d), "credit": float(c), "balance": float(balances.get(a["code"], ZERO)),
+        })
+    return out
+
+
 # ── 写操作（由调用方负责 commit；校验失败抛 ValueError） ──
 def create_product(session: Session, code: str, name: str, category: str = "",
                    unit: str = "个", unit_price: float = 0, quantity: float = 0,
