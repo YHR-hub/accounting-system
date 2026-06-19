@@ -24,6 +24,7 @@ from accsys.models import JournalEntry, Voucher
 
 from .auth import create_access_token, get_current_user, require_roles, verify_user
 from .schemas import (
+    AccountCreate,
     AccountOut,
     EmployeeCreate,
     FixedAssetCreate,
@@ -354,3 +355,27 @@ def create_project(p: ProjectCreate, db: Session = Depends(get_db),
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return _commit(db, r)
+
+
+# ── 凭证明细 / 科目新增 / 试算平衡表 ──────────────────
+@app.get("/api/vouchers/{voucher_id}", tags=["凭证"])
+def voucher_detail(voucher_id: int, db: Session = Depends(get_db)):
+    detail = repo.get_voucher_detail(db, voucher_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="凭证不存在")
+    return detail
+
+
+@app.post("/api/accounts", status_code=201, tags=["科目"])
+def create_account(a: AccountCreate, db: Session = Depends(get_db),
+                   user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.add_account(db, a.code, a.name, a.category, a.nature, a.parent)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)
+
+
+@app.get("/api/reports/trial-balance", tags=["报表"])
+def report_trial_balance(db: Session = Depends(get_db)):
+    return repo.trial_balance_data(db)

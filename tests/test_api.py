@@ -193,3 +193,35 @@ def test_payroll_run_endpoint():
     r = client.post("/api/payroll/run", headers=h, json={"year": 2030, "month": 1})
     assert r.status_code == 200
     assert "created" in r.json()
+
+
+def test_trial_balance():
+    r = client.get("/api/reports/trial-balance")
+    assert r.status_code == 200
+    body = r.json()
+    assert "balanced" in body and "rows" in body
+
+
+def test_voucher_detail_and_404():
+    h = _auth_header("admin", "admin123")
+    created = client.post("/api/vouchers", headers=h, json=_balanced_payload())
+    assert created.status_code == 201, created.text
+    vid = created.json()["id"]
+    r = client.get(f"/api/vouchers/{vid}")
+    assert r.status_code == 200
+    assert len(r.json()["entries"]) == 2
+    client.delete(f"/api/vouchers/{vid}", headers=h)
+    assert client.get("/api/vouchers/99999999").status_code == 404
+
+
+def test_create_account_auth_and_flow():
+    assert client.post("/api/accounts", json={"code": "x", "name": "y", "category": "asset"}).status_code == 401
+    hv = _auth_header("viewer", "view123")
+    assert client.post("/api/accounts", headers=hv,
+                       json={"code": _uniq("9"), "name": "y", "category": "asset"}).status_code == 403
+    h = _auth_header("admin", "admin123")
+    code = _uniq("9")
+    r = client.post("/api/accounts", headers=h, json={"code": code, "name": "测试科目", "category": "asset"})
+    assert r.status_code == 201, r.text
+    assert client.post("/api/accounts", headers=h,
+                       json={"code": code, "name": "重复", "category": "asset"}).status_code == 400

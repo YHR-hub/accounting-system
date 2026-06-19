@@ -139,3 +139,11 @@ class ProjectCreate(BaseModel):
 class PayrollRun(BaseModel):
     year: int
     month: int
+
+
+class AccountCreate(BaseModel):
+    code: str
+    name: str
+    category: str
+    nature: Optional[str] = None
+    parent: str = ""

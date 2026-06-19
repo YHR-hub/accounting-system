@@ -117,3 +117,34 @@ def test_write_operations(engine):
         s.commit()
         assert any(a["name"] == "打印机" for a in repo.list_fixed_assets(s))
         assert any(p["code"] == "PRJ-100" for p in repo.list_projects(s))
+
+
+def test_voucher_detail_account_and_trial_balance(engine):
+    repo.bootstrap(engine)
+    with Session(engine) as s:
+        vno = repo.next_voucher_no(s, 2026, 6)
+        v = Voucher(voucher_no=vno, date="2026-06-01", summary="测试",
+                    fiscal_year=2026, fiscal_month=6)
+        s.add(v)
+        s.flush()
+        s.add(JournalEntry(voucher_id=v.id, account_code="1002",
+                           debit=Decimal("100"), credit=Decimal("0")))
+        s.add(JournalEntry(voucher_id=v.id, account_code="6001",
+                           debit=Decimal("0"), credit=Decimal("100")))
+        s.commit()
+
+        detail = repo.get_voucher_detail(s, v.id)
+        assert detail is not None
+        assert len(detail["entries"]) == 2
+        assert detail["entries"][0]["account_name"]  # 关联到了科目名
+        assert repo.get_voucher_detail(s, 999999) is None
+
+        repo.add_account(s, "1234", "测试科目", "asset")
+        s.commit()
+        assert any(a["code"] == "1234" for a in repo.load_accounts(s))
+        with pytest.raises(ValueError):
+            repo.add_account(s, "1234", "重复", "asset")
+
+        tb = repo.trial_balance_data(s)
+        assert tb["balanced"] is True
+        assert tb["total_debit"] == tb["total_credit"]

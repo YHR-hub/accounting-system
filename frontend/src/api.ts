@@ -163,6 +163,33 @@ export interface EsgRow {
   unit: string
   note: string
 }
+export interface VoucherEntry {
+  account_code: string
+  account_name: string
+  debit: number
+  credit: number
+}
+export interface VoucherDetail {
+  id: number
+  voucher_no: string
+  date: string
+  summary: string
+  fiscal_year: number
+  fiscal_month: number
+  entries: VoucherEntry[]
+}
+export interface TrialBalanceRow {
+  code: string
+  name: string
+  debit: number
+  credit: number
+}
+export interface TrialBalance {
+  rows: TrialBalanceRow[]
+  total_debit: number
+  total_credit: number
+  balanced: boolean
+}
 
 export const api = {
   login: (username: string, password: string) =>
@@ -205,4 +232,9 @@ export const api = {
     http.post('/api/projects', body).then((r) => r.data),
   runPayroll: (year: number, month: number) =>
     http.post('/api/payroll/run', { year, month }).then((r) => r.data),
+  voucherDetail: (id: number) =>
+    http.get<VoucherDetail>(`/api/vouchers/${id}`).then((r) => r.data),
+  addAccount: (body: Record<string, unknown>) =>
+    http.post('/api/accounts', body).then((r) => r.data),
+  trialBalance: () => http.get<TrialBalance>('/api/reports/trial-balance').then((r) => r.data),
 }

@@ -630,3 +630,74 @@ def calculate_payroll(session: Session, year: int, month: int) -> List[dict]:
         created.append({"employee_id": e.id, "name": e.name, "gross_pay": float(gross),
                         "income_tax": tax, "net_pay": round(net, 2)})
     return created
+
+
+# ── 凭证明细 / 科目管理 / 试算平衡 ────────────────────
+def get_voucher_detail(session: Session, voucher_id: int) -> Optional[dict]:
+    v = session.get(Voucher, voucher_id)
+    if v is None:
+        return None
+    rows = session.execute(
+        select(JournalEntry, Account.name)
+        .join(Account, Account.code == JournalEntry.account_code, isouter=True)
+        .where(JournalEntry.voucher_id == voucher_id)
+        .order_by(JournalEntry.id)
+    ).all()
+    entries = [{
+        "account_code": je.account_code, "account_name": name or "",
+        "debit": _f(je.debit), "credit": _f(je.credit),
+    } for je, name in rows]
+    return {
+        "id": v.id, "voucher_no": v.voucher_no, "date": v.date, "summary": v.summary,
+        "fiscal_year": v.fiscal_year, "fiscal_month": v.fiscal_month, "entries": entries,
+    }
+
+
+def add_account(session: Session, code: str, name: str, category: str,
+                nature: str | None = None, parent: str = "") -> dict:
+    if session.get(Account, code):
+        raise ValueError(f"科目编码 {code} 已存在")
+    if category not in ("asset", "liability", "equity", "income", "expense"):
+        raise ValueError("无效的科目类别")
+    if nature is None:
+        nature = "debit" if category in ("asset", "expense") else "credit"
+    level = 1
+    if parent:
+        p = session.get(Account, parent)
+        level = (p.level + 1) if p else 1
+    a = Account(code=code, name=name, category=category, nature=nature,
+                level=level, parent=parent, is_contra=0, is_active=1)
+    session.add(a)
+    session.flush()
+    return {"code": a.code, "name": a.name, "category": a.category, "nature": a.nature}
+
+
+def trial_balance_data(session: Session) -> dict:
+    accounts = load_accounts(session)
+    balances = calc_balances(session, accounts)
+    rows = []
+    total_dr = total_cr = ZERO
+    for a in accounts:
+        bal = balances.get(a["code"], ZERO)
+        dr = cr = ZERO
+        if bal > 0:
+            if a["nature"] == "debit":
+                dr = bal
+            else:
+                cr = bal
+        elif bal < 0:
+            if a["nature"] == "debit":
+                cr = -bal
+            else:
+                dr = -bal
+        if dr or cr:
+            rows.append({"code": a["code"], "name": a["name"],
+                         "debit": float(dr), "credit": float(cr)})
+            total_dr += dr
+            total_cr += cr
+    return {
+        "rows": rows,
+        "total_debit": float(total_dr),
+        "total_credit": float(total_cr),
+        "balanced": abs(total_dr - total_cr) < Decimal("0.01"),
+    }
