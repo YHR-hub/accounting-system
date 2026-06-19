@@ -67,6 +67,58 @@ export interface VoucherCreate {
   entries: EntryIn[]
 }
 
+export interface Product {
+  id: number
+  code: string
+  name: string
+  category: string
+  unit: string
+  unit_price: number
+  quantity: number
+  amount: number
+  min_stock: number
+  location: string
+}
+export interface Employee {
+  id: number
+  code: string
+  name: string
+  department: string
+  position: string
+  base_salary: number
+  insurance: number
+  housing_fund: number
+}
+export interface FixedAsset {
+  id: number
+  name: string
+  original_value: number
+  residual_value: number
+  useful_life_months: number
+  depreciation_method: string
+  purchase_date: string
+  accumulated_deprec: number
+  net_value: number
+}
+export interface Project {
+  id: number
+  code: string
+  name: string
+  budget: number
+  start_date: string | null
+  end_date: string | null
+  status: string
+}
+export interface AuditLog {
+  id: number
+  username: string
+  action: string
+  target_type: string
+  target_id: string
+  detail: string
+  created_at: string
+}
+
 export const api = {
   login: (username: string, password: string) =>
     http.post<TokenResponse>('/api/auth/login', { username, password }).then((r) => r.data),
@@ -81,4 +133,9 @@ export const api = {
   createVoucher: (v: VoucherCreate) =>
     http.post<{ id: number; voucher_no: string }>('/api/vouchers', v).then((r) => r.data),
   deleteVoucher: (id: number) => http.delete(`/api/vouchers/${id}`),
+  products: () => http.get<Product[]>('/api/inventory/products').then((r) => r.data),
+  employees: () => http.get<Employee[]>('/api/employees').then((r) => r.data),
+  assets: () => http.get<FixedAsset[]>('/api/assets').then((r) => r.data),
+  projects: () => http.get<Project[]>('/api/projects').then((r) => r.data),
+  audit: () => http.get<AuditLog[]>('/api/audit').then((r) => r.data),
 }

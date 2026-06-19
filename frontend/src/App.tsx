@@ -4,6 +4,11 @@ import {
   BankOutlined,
   ProfileOutlined,
   LogoutOutlined,
+  InboxOutlined,
+  TeamOutlined,
+  GoldOutlined,
+  ProjectOutlined,
+  AuditOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu, Button, Typography } from 'antd'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
@@ -13,6 +18,11 @@ import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
 import Accounts from './pages/Accounts'
 import Vouchers from './pages/Vouchers'
+import Inventory from './pages/Inventory'
+import Employees from './pages/Employees'
+import Assets from './pages/Assets'
+import Projects from './pages/Projects'
+import Audit from './pages/Audit'
 
 const { Header, Sider, Content } = Layout
 
@@ -26,6 +36,11 @@ function Shell() {
     { key: '/reports', icon: <FileTextOutlined />, label: '财务报表' },
     { key: '/accounts', icon: <BankOutlined />, label: '科目余额' },
     { key: '/vouchers', icon: <ProfileOutlined />, label: '凭证' },
+    { key: '/inventory', icon: <InboxOutlined />, label: '库存' },
+    { key: '/employees', icon: <TeamOutlined />, label: '员工' },
+    { key: '/assets', icon: <GoldOutlined />, label: '固定资产' },
+    { key: '/projects', icon: <ProjectOutlined />, label: '项目' },
+    { key: '/audit', icon: <AuditOutlined />, label: '审计日志' },
   ]
 
   return (
@@ -72,6 +87,11 @@ function Shell() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/vouchers" element={<Vouchers />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/assets" element={<Assets />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/audit" element={<Audit />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>
