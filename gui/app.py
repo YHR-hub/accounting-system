@@ -91,7 +91,7 @@ class AccountingApp(
 
     def _c(self, key: str) -> str:
         """Get current theme color."""
-        return acc.get_theme().get(key, '#FFF0F5')
+        return acc.get_theme().get(key, '#F4F5F7')
 
     def _apply_theme(self):
         """Apply theme colors to module-level constants."""
@@ -112,7 +112,7 @@ class AccountingApp(
         win.title('登录 - 会计系统专业版')
         win.geometry('420x380+500+250')
         win.resizable(False, False)
-        win.configure(bg='#FFF0F5')
+        win.configure(bg='#F4F5F7')
 
         def on_close():
             acc.CURRENT_USER = {}
@@ -120,24 +120,24 @@ class AccountingApp(
 
         win.protocol('WM_DELETE_WINDOW', on_close)
 
-        frame = tk.Frame(win, bg='#FFF0F5', padx=30, pady=20)
+        frame = tk.Frame(win, bg='#F4F5F7', padx=30, pady=20)
         frame.pack(fill=tk.BOTH, expand=True)
 
         tk.Label(frame, text='🌸 会计系统专业版 🌸', font=('微软雅黑', 16, 'bold'),
-                 bg='#FFF0F5', fg='#FF6B9D').pack(pady=(10, 20))
+                 bg='#F4F5F7', fg='#6C5CE7').pack(pady=(10, 20))
         tk.Label(frame, text='用户登录', font=('微软雅黑', 12, 'bold'),
-                 bg='#FFF0F5', fg='#8B5CF6').pack(pady=(0, 15))
+                 bg='#F4F5F7', fg='#5A4BD1').pack(pady=(0, 15))
 
-        tk.Label(frame, text='用户名:', font=('微软雅黑', 11), bg='#FFF0F5').pack(anchor='w')
+        tk.Label(frame, text='用户名:', font=('微软雅黑', 11), bg='#F4F5F7').pack(anchor='w')
         user_var = tk.StringVar(value='admin')
         tk.Entry(frame, textvariable=user_var, font=('Consolas', 11)).pack(fill=tk.X, pady=(0, 10))
 
-        tk.Label(frame, text='密码:', font=('微软雅黑', 11), bg='#FFF0F5').pack(anchor='w')
+        tk.Label(frame, text='密码:', font=('微软雅黑', 11), bg='#F4F5F7').pack(anchor='w')
         pass_var = tk.StringVar(value='admin123')
         tk.Entry(frame, textvariable=pass_var, font=('Consolas', 11), show='*').pack(fill=tk.X, pady=(0, 15))
 
         result_var = tk.StringVar()
-        tk.Label(frame, textvariable=result_var, font=('微软雅黑', 10), bg='#FFF0F5',
+        tk.Label(frame, textvariable=result_var, font=('微软雅黑', 10), bg='#F4F5F7',
                  fg='#FF4757').pack()
 
         def do_login():
@@ -148,11 +148,11 @@ class AccountingApp(
                 result_var.set('❌ 用户名或密码错误')
 
         tk.Button(frame, text='登 录', font=('微软雅黑', 14, 'bold'),
-                  command=do_login, bg='#FF6B9D', fg='white',
+                  command=do_login, bg='#6C5CE7', fg='white',
                   width=25, pady=8, padx=20).pack(pady=15, ipady=4)
 
         tk.Label(frame, text='默认账号: admin/admin123', font=('微软雅黑', 9),
-                 bg='#FFF0F5', fg='#999999').pack()
+                 bg='#F4F5F7', fg='#999999').pack()
         win.bind('<Return>', lambda e: do_login())
         win.grab_set()
         self.root.wait_window(win)

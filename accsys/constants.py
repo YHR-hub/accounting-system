@@ -251,20 +251,20 @@ DEFAULT_AI_CONFIG: Dict[str, Any] = {
 THEME_FILE: str = "theme.json"
 THEMES: Dict[str, Dict[str, str]] = {
     "light": {
-        "bg": "#FFF0F5", "primary": "#FF6B9D", "success": "#7BC67E",
-        "warn": "#FFB347", "alt": "#F5E6FF", "accent": "#8B5CF6",
-        "violet": "#7C3AED", "purple": "#9C27B0", "fg": "#333333",
-        "text_bg": "#FFF0F5", "header_fg": "white", "tab_bg": "#FFE4EC",
-        "tab_fg": "#6B3FA0", "tab_sel": "#FFB3C6", "tab_act": "#FFCDD9",
-        "tab_sel_fg": "#4A1A6B",
+        "bg": "#F4F5F7", "primary": "#6C5CE7", "success": "#00B894",
+        "warn": "#FDCB6E", "alt": "#EEF0FF", "accent": "#5A4BD1",
+        "violet": "#5A4BD1", "purple": "#8E7CF0", "fg": "#2D3436",
+        "text_bg": "#FFFFFF", "header_fg": "white", "tab_bg": "#E9EBF5",
+        "tab_fg": "#4A4A6A", "tab_sel": "#6C5CE7", "tab_act": "#D8DCF0",
+        "tab_sel_fg": "#FFFFFF",
     },
     "dark": {
-        "bg": "#1A1A2E", "primary": "#E040A0", "success": "#66BB6A",
-        "warn": "#FFA726", "alt": "#2D2D44", "accent": "#B388FF",
-        "violet": "#9C7CF4", "purple": "#CE93D8", "fg": "#E0E0E0",
-        "text_bg": "#252540", "header_fg": "white", "tab_bg": "#2D2D44",
-        "tab_fg": "#B0B0FF", "tab_sel": "#4A1A6B", "tab_act": "#3D2D5C",
-        "tab_sel_fg": "#E0E0FF",
+        "bg": "#1E1E2E", "primary": "#6C5CE7", "success": "#55EFC4",
+        "warn": "#FFEAA7", "alt": "#2A2A3E", "accent": "#7C6CF0",
+        "violet": "#A29BFE", "purple": "#B8A9FF", "fg": "#E6E6E6",
+        "text_bg": "#252538", "header_fg": "white", "tab_bg": "#2A2A3E",
+        "tab_fg": "#B0B0D0", "tab_sel": "#6C5CE7", "tab_act": "#3A3A52",
+        "tab_sel_fg": "#FFFFFF",
     },
 }
 

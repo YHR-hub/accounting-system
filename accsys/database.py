@@ -19,16 +19,23 @@ from openpyxl.utils import get_column_letter
 from .constants import DB_FILE, EXCEL_FILE, ACCOUNTS_FILE, DEFAULT_ACCOUNTS, CATEGORY_LABELS, NATURE_LABELS
 
 
+def _base_dir() -> str:
+    """数据文件基目录：打包(exe)时用 exe 所在目录，开发时用包目录。"""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def get_db_path() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), DB_FILE)
+    return os.path.join(_base_dir(), DB_FILE)
 
 
 def get_excel_path() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), EXCEL_FILE)
+    return os.path.join(_base_dir(), EXCEL_FILE)
 
 
 def get_accounts_path() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ACCOUNTS_FILE)
+    return os.path.join(_base_dir(), ACCOUNTS_FILE)
 
 
 def get_conn() -> sqlite3.Connection:
