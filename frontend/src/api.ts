@@ -118,6 +118,51 @@ export interface AuditLog {
   detail: string
   created_at: string
 }
+export interface PayrollRecord {
+  id: number
+  employee_id: number
+  year: number
+  month: number
+  gross_pay: number
+  income_tax: number
+  net_pay: number
+  status: string
+}
+export interface Budget {
+  id: number
+  account_code: string
+  fiscal_year: number
+  fiscal_month: number
+  budget_amount: number
+  note: string
+}
+export interface AlertRule {
+  id: number
+  name: string
+  indicator: string
+  operator: string
+  threshold: number
+  enabled: number
+  level: string
+}
+export interface AlertHistory {
+  id: number
+  rule_id: number | null
+  message: string
+  level: string
+  resolved: number
+  created_at: string
+}
+export interface EsgRow {
+  id: number
+  category: string
+  year: number | string
+  month: number
+  indicator: string
+  value: number
+  unit: string
+  note: string
+}
 
 export const api = {
   login: (username: string, password: string) =>
@@ -138,4 +183,26 @@ export const api = {
   assets: () => http.get<FixedAsset[]>('/api/assets').then((r) => r.data),
   projects: () => http.get<Project[]>('/api/projects').then((r) => r.data),
   audit: () => http.get<AuditLog[]>('/api/audit').then((r) => r.data),
+  payroll: (year: number, month: number) =>
+    http.get<PayrollRecord[]>('/api/payroll', { params: { year, month } }).then((r) => r.data),
+  budgets: (year: number) =>
+    http.get<Budget[]>('/api/budgets', { params: { year } }).then((r) => r.data),
+  alertRules: () => http.get<AlertRule[]>('/api/alerts/rules').then((r) => r.data),
+  alertHistory: () => http.get<AlertHistory[]>('/api/alerts/history').then((r) => r.data),
+  esg: (year: number) =>
+    http.get<EsgRow[]>('/api/esg', { params: { year } }).then((r) => r.data),
+  createProduct: (body: Record<string, unknown>) =>
+    http.post('/api/inventory/products', body).then((r) => r.data),
+  inventoryIn: (body: { product_id: number; quantity: number; unit_price?: number; note?: string }) =>
+    http.post('/api/inventory/in', body).then((r) => r.data),
+  inventoryOut: (body: { product_id: number; quantity: number; note?: string }) =>
+    http.post('/api/inventory/out', body).then((r) => r.data),
+  addEmployee: (body: Record<string, unknown>) =>
+    http.post('/api/employees', body).then((r) => r.data),
+  addAsset: (body: Record<string, unknown>) =>
+    http.post('/api/assets', body).then((r) => r.data),
+  addProject: (body: Record<string, unknown>) =>
+    http.post('/api/projects', body).then((r) => r.data),
+  runPayroll: (year: number, month: number) =>
+    http.post('/api/payroll/run', { year, month }).then((r) => r.data),
 }
