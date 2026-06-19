@@ -90,3 +90,52 @@ class VoucherCreate(BaseModel):
 class VoucherCreated(BaseModel):
     id: int
     voucher_no: str
+
+
+class ProductCreate(BaseModel):
+    code: str
+    name: str
+    category: str = ""
+    unit: str = "个"
+    unit_price: float = 0
+    quantity: float = 0
+    min_stock: float = 0
+
+
+class InventoryMove(BaseModel):
+    product_id: int
+    quantity: float
+    unit_price: float = 0
+    note: str = ""
+
+
+class EmployeeCreate(BaseModel):
+    code: str
+    name: str
+    department: str = ""
+    position: str = ""
+    base_salary: float = 0
+    insurance: float = 0
+    housing_fund: float = 0
+
+
+class FixedAssetCreate(BaseModel):
+    name: str
+    original_value: float
+    useful_life_months: int
+    purchase_date: str
+    residual_value: float = 0
+    depreciation_method: str = "straight"
+
+
+class ProjectCreate(BaseModel):
+    code: str
+    name: str
+    budget: float = 0
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+class PayrollRun(BaseModel):
+    year: int
+    month: int

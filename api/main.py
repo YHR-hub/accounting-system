@@ -25,9 +25,15 @@ from accsys.models import JournalEntry, Voucher
 from .auth import create_access_token, get_current_user, require_roles, verify_user
 from .schemas import (
     AccountOut,
+    EmployeeCreate,
+    FixedAssetCreate,
     Health,
+    InventoryMove,
     LoginRequest,
+    PayrollRun,
     PitResult,
+    ProductCreate,
+    ProjectCreate,
     ReportRow,
     TokenResponse,
     UserOut,
@@ -272,3 +278,79 @@ def audit_logs(limit: int = Query(100, ge=1, le=500), db: Session = Depends(get_
 @app.get("/api/esg", tags=["ESG"])
 def esg(year: int = Query(0, ge=0), db: Session = Depends(get_db)):
     return repo.list_esg_data(db, year or None)
+
+
+# ── 写操作（需 accountant / admin 角色） ──────────────
+def _commit(db: Session, result):
+    db.commit()
+    return result
+
+
+@app.post("/api/inventory/products", status_code=201, tags=["库存"])
+def create_product(p: ProductCreate, db: Session = Depends(get_db),
+                   user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.create_product(db, p.code, p.name, p.category, p.unit,
+                                p.unit_price, p.quantity, p.min_stock)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)
+
+
+@app.post("/api/inventory/in", tags=["库存"])
+def inventory_in(m: InventoryMove, db: Session = Depends(get_db),
+                 user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.inventory_in(db, m.product_id, m.quantity, m.unit_price, m.note)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)
+
+
+@app.post("/api/inventory/out", tags=["库存"])
+def inventory_out(m: InventoryMove, db: Session = Depends(get_db),
+                  user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.inventory_out(db, m.product_id, m.quantity, m.note)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)
+
+
+@app.post("/api/employees", status_code=201, tags=["薪资"])
+def create_employee(e: EmployeeCreate, db: Session = Depends(get_db),
+                    user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.add_employee(db, e.code, e.name, e.department, e.position,
+                              e.base_salary, e.insurance, e.housing_fund)
+    except ValueError as ex:
+        raise HTTPException(status_code=400, detail=str(ex))
+    return _commit(db, r)
+
+
+@app.post("/api/payroll/run", tags=["薪资"])
+def run_payroll(body: PayrollRun, db: Session = Depends(get_db),
+                user: dict = Depends(require_roles("admin", "accountant"))):
+    r = repo.calculate_payroll(db, body.year, body.month)
+    return _commit(db, {"created": len(r), "records": r})
+
+
+@app.post("/api/assets", status_code=201, tags=["固定资产"])
+def create_asset(a: FixedAssetCreate, db: Session = Depends(get_db),
+                 user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.add_fixed_asset(db, a.name, a.original_value, a.useful_life_months,
+                                 a.purchase_date, a.residual_value, a.depreciation_method)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)
+
+
+@app.post("/api/projects", status_code=201, tags=["项目"])
+def create_project(p: ProjectCreate, db: Session = Depends(get_db),
+                   user: dict = Depends(require_roles("admin", "accountant"))):
+    try:
+        r = repo.add_project(db, p.code, p.name, p.budget, p.start_date, p.end_date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _commit(db, r)

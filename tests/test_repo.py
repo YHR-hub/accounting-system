@@ -82,3 +82,38 @@ def test_module_list_functions_with_data(engine):
 
         assets = repo.list_fixed_assets(s)
         assert len(assets) == 1 and assets[0]["net_value"] == 80000.0
+
+
+def test_write_operations(engine):
+    repo.bootstrap(engine)
+    with Session(engine) as s:
+        repo.create_product(s, "P100", "螺丝", unit_price=2.0, quantity=10)
+        s.commit()
+        pid = next(p["id"] for p in repo.list_products(s) if p["code"] == "P100")
+
+        repo.inventory_in(s, pid, 5, unit_price=2.5)
+        s.commit()
+        assert next(p["quantity"] for p in repo.list_products(s) if p["id"] == pid) == 15.0
+
+        repo.inventory_out(s, pid, 3)
+        s.commit()
+        assert next(p["quantity"] for p in repo.list_products(s) if p["id"] == pid) == 12.0
+
+        with pytest.raises(ValueError):
+            repo.inventory_out(s, pid, 9999)
+        with pytest.raises(ValueError):
+            repo.create_product(s, "P100", "重复")
+
+        repo.add_employee(s, "E100", "李四", base_salary=20000, insurance=2000, housing_fund=1000)
+        s.commit()
+        created = repo.calculate_payroll(s, 2026, 7)
+        s.commit()
+        assert len(created) == 1
+        assert created[0]["income_tax"] == 990.0
+        assert repo.calculate_payroll(s, 2026, 7) == []
+
+        repo.add_fixed_asset(s, "打印机", 3000, 36, "2026-01-01")
+        repo.add_project(s, "PRJ-100", "新项目", budget=100000)
+        s.commit()
+        assert any(a["name"] == "打印机" for a in repo.list_fixed_assets(s))
+        assert any(p["code"] == "PRJ-100" for p in repo.list_projects(s))

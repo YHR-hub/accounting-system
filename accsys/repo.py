@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from .constants import DEFAULT_ACCOUNTS
 from .db import Base
+from .tax import compute_pit
 from .models import (
     Account,
     AlertHistory,
@@ -469,3 +470,133 @@ def list_esg_data(session: Session, year: int | None = None) -> List[dict]:
         "id": d.id, "category": d.category, "year": d.year, "month": d.month,
         "indicator": d.indicator, "value": _f(d.value), "unit": d.unit, "note": d.note,
     } for d in rows]
+
+
+# ── 写操作（由调用方负责 commit；校验失败抛 ValueError） ──
+def create_product(session: Session, code: str, name: str, category: str = "",
+                   unit: str = "个", unit_price: float = 0, quantity: float = 0,
+                   min_stock: float = 0) -> dict:
+    if session.scalar(select(Product).where(Product.code == code)):
+        raise ValueError(f"商品编码 {code} 已存在")
+    p = Product(code=code, name=name, category=category, unit=unit,
+                unit_price=Decimal(str(unit_price)), quantity=Decimal(str(quantity)),
+                min_stock=Decimal(str(min_stock)), is_active=1)
+    session.add(p)
+    session.flush()
+    return {"id": p.id, "code": p.code, "name": p.name}
+
+
+def _get_product(session: Session, product_id: int) -> Product:
+    p = session.get(Product, product_id)
+    if p is None:
+        raise ValueError("商品不存在")
+    return p
+
+
+def inventory_in(session: Session, product_id: int, quantity: float,
+                 unit_price: float = 0, note: str = "") -> dict:
+    if quantity <= 0:
+        raise ValueError("入库数量必须大于 0")
+    p = _get_product(session, product_id)
+    p.quantity = _dec(p.quantity) + Decimal(str(quantity))
+    if unit_price:
+        p.unit_price = Decimal(str(unit_price))
+    session.add(InventoryTransaction(
+        product_id=product_id, trans_type="in", quantity=Decimal(str(quantity)),
+        unit_price=Decimal(str(unit_price)), note=note))
+    session.flush()
+    return {"product_id": product_id, "quantity": float(p.quantity)}
+
+
+def inventory_out(session: Session, product_id: int, quantity: float, note: str = "") -> dict:
+    if quantity <= 0:
+        raise ValueError("出库数量必须大于 0")
+    p = _get_product(session, product_id)
+    if _dec(p.quantity) < Decimal(str(quantity)):
+        raise ValueError(f"库存不足：现有 {float(p.quantity)}，需出 {quantity}")
+    p.quantity = _dec(p.quantity) - Decimal(str(quantity))
+    session.add(InventoryTransaction(
+        product_id=product_id, trans_type="out", quantity=Decimal(str(quantity)),
+        unit_price=p.unit_price, note=note))
+    session.flush()
+    return {"product_id": product_id, "quantity": float(p.quantity)}
+
+
+def add_employee(session: Session, code: str, name: str, department: str = "",
+                 position: str = "", base_salary: float = 0, insurance: float = 0,
+                 housing_fund: float = 0) -> dict:
+    if session.scalar(select(Employee).where(Employee.code == code)):
+        raise ValueError(f"工号 {code} 已存在")
+    e = Employee(code=code, name=name, department=department, position=position,
+                 base_salary=Decimal(str(base_salary)), insurance=Decimal(str(insurance)),
+                 housing_fund=Decimal(str(housing_fund)), is_active=1)
+    session.add(e)
+    session.flush()
+    return {"id": e.id, "code": e.code, "name": e.name}
+
+
+def add_fixed_asset(session: Session, name: str, original_value: float,
+                    useful_life_months: int, purchase_date: str,
+                    residual_value: float = 0, depreciation_method: str = "straight") -> dict:
+    if useful_life_months <= 0:
+        raise ValueError("使用年限(月)必须大于 0")
+    a = FixedAsset(name=name, original_value=Decimal(str(original_value)),
+                   residual_value=Decimal(str(residual_value)),
+                   useful_life_months=useful_life_months,
+                   depreciation_method=depreciation_method,
+                   purchase_date=purchase_date, accumulated_deprec=Decimal("0"), is_active=1)
+    session.add(a)
+    session.flush()
+    return {"id": a.id, "name": a.name}
+
+
+def add_project(session: Session, code: str, name: str, budget: float = 0,
+                start_date: str | None = None, end_date: str | None = None) -> dict:
+    if session.scalar(select(Project).where(Project.code == code)):
+        raise ValueError(f"项目编码 {code} 已存在")
+    p = Project(code=code, name=name, budget=Decimal(str(budget)),
+                start_date=start_date, end_date=end_date, status="active")
+    session.add(p)
+    session.flush()
+    return {"id": p.id, "code": p.code, "name": p.name}
+
+
+def calculate_payroll(session: Session, year: int, month: int) -> List[dict]:
+    """为当月每位在职员工生成草稿工资记录（已存在则跳过）。
+
+    个税采用年化估算：月应纳税所得额×12 套用年度累进税率后再÷12。
+    """
+    employees = session.execute(
+        select(Employee).where(Employee.is_active == 1)
+    ).scalars().all()
+    created: List[dict] = []
+    for e in employees:
+        exists = session.scalar(
+            select(PayrollRecord).where(
+                PayrollRecord.employee_id == e.id,
+                PayrollRecord.year == year,
+                PayrollRecord.month == month,
+            )
+        )
+        if exists:
+            continue
+        gross = _dec(e.base_salary)
+        insurance = _dec(e.insurance)
+        housing = _dec(e.housing_fund)
+        threshold = _dec(e.tax_threshold) if e.tax_threshold is not None else Decimal("5000")
+        taxable = gross - insurance - housing - threshold
+        if taxable < 0:
+            taxable = Decimal("0")
+        annual_tax = compute_pit(float(taxable) * 12)["total_tax"]
+        tax = round(annual_tax / 12, 2)
+        net = float(gross - insurance - housing) - tax
+        rec = PayrollRecord(
+            employee_id=e.id, year=year, month=month, gross_pay=gross,
+            insurance=insurance, housing_fund=housing, taxable_income=taxable,
+            income_tax=Decimal(str(tax)), net_pay=Decimal(str(round(net, 2))), status="draft",
+        )
+        session.add(rec)
+        session.flush()
+        created.append({"employee_id": e.id, "name": e.name, "gross_pay": float(gross),
+                        "income_tax": tax, "net_pay": round(net, 2)})
+    return created

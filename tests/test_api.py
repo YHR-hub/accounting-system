@@ -1,4 +1,6 @@
 """FastAPI 接口测试（阶段3）。无 fastapi 环境时自动跳过。"""
+import uuid
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -154,3 +156,40 @@ def test_module_list_endpoints(path):
     r = client.get(path)
     assert r.status_code == 200
     assert isinstance(r.json(), list)
+
+
+def _uniq(prefix):
+    return f"{prefix}{uuid.uuid4().hex[:6]}"
+
+
+def test_create_product_requires_auth():
+    assert client.post("/api/inventory/products",
+                       json={"code": "X", "name": "y"}).status_code == 401
+
+
+def test_viewer_cannot_create_product():
+    h = _auth_header("viewer", "view123")
+    assert client.post("/api/inventory/products", headers=h,
+                       json={"code": _uniq("V"), "name": "y"}).status_code == 403
+
+
+def test_product_and_inventory_flow():
+    h = _auth_header("admin", "admin123")
+    code = _uniq("P")
+    r = client.post("/api/inventory/products", headers=h,
+                    json={"code": code, "name": "测试件", "unit_price": 10, "quantity": 5})
+    assert r.status_code == 201, r.text
+    pid = r.json()["id"]
+    assert client.post("/api/inventory/in", headers=h,
+                       json={"product_id": pid, "quantity": 5}).status_code == 200
+    assert client.post("/api/inventory/out", headers=h,
+                       json={"product_id": pid, "quantity": 3}).status_code == 200
+    assert client.post("/api/inventory/out", headers=h,
+                       json={"product_id": pid, "quantity": 9999}).status_code == 400
+
+
+def test_payroll_run_endpoint():
+    h = _auth_header("admin", "admin123")
+    r = client.post("/api/payroll/run", headers=h, json={"year": 2030, "month": 1})
+    assert r.status_code == 200
+    assert "created" in r.json()
