@@ -18,7 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import accsys as acc
-from accsys.db import SessionLocal, get_database_url
+from accsys import repo
+from accsys.db import SessionLocal, engine, get_database_url
 from accsys.models import JournalEntry, Voucher
 
 from .auth import create_access_token, get_current_user, require_roles, verify_user
@@ -39,9 +40,7 @@ from .schemas import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    acc.init_db()
-    acc.ensure_accounts()
-    acc.init_users()
+    repo.bootstrap(engine)
     yield
 
 
@@ -71,14 +70,14 @@ def health():
 
 
 @app.get("/api/ratios", tags=["报表"])
-def ratios() -> Dict[str, float]:
-    return acc.calc_financial_ratios()
+def ratios(db: Session = Depends(get_db)) -> Dict[str, float]:
+    return repo.financial_ratios(db)
 
 
 @app.get("/api/accounts", response_model=List[AccountOut], tags=["科目"])
 def accounts(db: Session = Depends(get_db)):
-    accts = acc.load_accounts_from_db()
-    balances = acc.calc_balances(accts)
+    accts = repo.load_accounts(db)
+    balances = repo.calc_balances(db, accts)
     rows = db.execute(
         select(
             JournalEntry.account_code,
@@ -124,18 +123,18 @@ def vouchers(
 
 
 @app.get("/api/reports/balance", response_model=List[ReportRow], tags=["报表"])
-def report_balance():
-    return acc.balance_sheet_data()
+def report_balance(db: Session = Depends(get_db)):
+    return repo.balance_sheet_data(db)
 
 
 @app.get("/api/reports/income", response_model=List[ReportRow], tags=["报表"])
-def report_income():
-    return acc.income_statement_data()
+def report_income(db: Session = Depends(get_db)):
+    return repo.income_statement_data(db)
 
 
 @app.get("/api/reports/cashflow", response_model=List[ReportRow], tags=["报表"])
-def report_cashflow():
-    return acc.cash_flow_statement_data()
+def report_cashflow(db: Session = Depends(get_db)):
+    return repo.cash_flow_statement_data(db)
 
 
 @app.get("/api/tax/vat", response_model=VatResult, tags=["税务"])
@@ -185,7 +184,7 @@ def create_voucher(
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式应为 YYYY-MM-DD")
 
-    v_no = acc.next_voucher_no(dt.year, dt.month)
+    v_no = repo.next_voucher_no(db, dt.year, dt.month)
     voucher = Voucher(
         voucher_no=v_no, date=payload.date, summary=payload.summary,
         fiscal_year=dt.year, fiscal_month=dt.month,
