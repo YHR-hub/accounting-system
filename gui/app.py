@@ -161,25 +161,41 @@ class AccountingApp(
     def _build_ui(self):
         top = tk.Frame(self.root, bg=self._c('primary'), height=56)
         top.pack(fill=tk.X)
-        tk.Label(top, text='🌸 会计系统专业版 v2.0 🌸', font=FONT_TITLE,
+        top.pack_propagate(False)
+        tk.Label(top, text='💠 会计系统专业版 v2.0', font=FONT_TITLE,
                  bg=self._c('primary'), fg='white').pack(side=tk.LEFT, padx=20, pady=8)
 
         user = acc.CURRENT_USER
         role_label = {'admin': '管理员', 'accountant': '会计员', 'viewer': '查询员'}
         tk.Label(top, text=f'👤 {user.get("display_name","")} ({role_label.get(user.get("role",""),"")})',
-                 font=FONT_TEXT, bg=self._c('primary'), fg='#FFE4EC').pack(side=tk.RIGHT, padx=5)
+                 font=FONT_TEXT, bg=self._c('primary'), fg='#E8E6FF').pack(side=tk.RIGHT, padx=5)
         tk.Button(top, text='🌙 深色', font=FONT_TEXT, command=self._toggle_theme,
-                  bg=self._c('accent'), fg='white', bd=0, padx=10).pack(side=tk.RIGHT, padx=2)
+                  bg=self._c('accent'), fg='white', bd=0, padx=10, cursor='hand2',
+                  activebackground=self._c('violet'), activeforeground='white').pack(side=tk.RIGHT, padx=2)
         tk.Button(top, text='⚙ 设置', font=FONT_TEXT, command=self._show_settings,
-                  bg=self._c('accent'), fg='white', bd=0, padx=15).pack(side=tk.RIGHT, padx=10)
+                  bg=self._c('accent'), fg='white', bd=0, padx=15, cursor='hand2',
+                  activebackground=self._c('violet'), activeforeground='white').pack(side=tk.RIGHT, padx=10)
 
         style = ttk.Style()
         style.theme_use('default')
         style.configure('TNotebook', background=self._c('bg'), borderwidth=0)
-        style.configure('TNotebook.Tab', font=FONT_TEXT, padding=[12, 4],
-                        background=self._c('tab_bg'), foreground=self._c('tab_fg'))
+        style.configure('TNotebook.Tab', font=FONT_TEXT, padding=[16, 8],
+                        background=self._c('tab_bg'), foreground=self._c('tab_fg'), borderwidth=0)
         style.map('TNotebook.Tab', background=[('selected', self._c('tab_sel')), ('active', self._c('tab_act'))],
                   foreground=[('selected', self._c('tab_sel_fg')), ('active', self._c('tab_fg'))])
+
+        # 全局表格(Treeview)现代化：白底、行更高、表头加粗扁平、选中靛紫高亮
+        style.configure('Treeview', background=self._c('text_bg'), fieldbackground=self._c('text_bg'),
+                        foreground=self._c('fg'), rowheight=28, font=FONT_SMALL, borderwidth=0)
+        style.configure('Treeview.Heading', font=FONT_CUTE, background=self._c('tab_bg'),
+                        foreground=self._c('fg'), relief='flat', padding=6)
+        style.map('Treeview', background=[('selected', self._c('primary'))],
+                  foreground=[('selected', 'white')])
+        style.map('Treeview.Heading', background=[('active', self._c('tab_act'))])
+        # 滚动条 / 输入框 / 下拉框 配合主题
+        style.configure('Vertical.TScrollbar', background=self._c('tab_bg'), borderwidth=0, troughcolor=self._c('bg'))
+        style.configure('Horizontal.TScrollbar', background=self._c('tab_bg'), borderwidth=0, troughcolor=self._c('bg'))
+        style.configure('TCombobox', fieldbackground=self._c('text_bg'), background=self._c('tab_bg'))
 
         nb = ttk.Notebook(self.root)
         nb.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
