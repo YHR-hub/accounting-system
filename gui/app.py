@@ -108,11 +108,12 @@ class AccountingApp(
 
     def _show_login(self) -> bool:
         acc.CURRENT_USER = {}
+        bg = '#F4F5F7'
         win = tk.Toplevel(self.root)
         win.title('登录 - 会计系统专业版')
-        win.geometry('420x380+500+250')
+        win.geometry('440x470+500+220')
         win.resizable(False, False)
-        win.configure(bg='#F4F5F7')
+        win.configure(bg=bg)
 
         def on_close():
             acc.CURRENT_USER = {}
@@ -120,40 +121,49 @@ class AccountingApp(
 
         win.protocol('WM_DELETE_WINDOW', on_close)
 
-        frame = tk.Frame(win, bg='#F4F5F7', padx=30, pady=20)
-        frame.pack(fill=tk.BOTH, expand=True)
+        card = tk.Frame(win, bg='white', padx=34, pady=26,
+                        highlightbackground='#E3E5F0', highlightthickness=1)
+        card.place(relx=0.5, rely=0.5, anchor='center', width=372, height=410)
 
-        tk.Label(frame, text='🌸 会计系统专业版 🌸', font=('微软雅黑', 16, 'bold'),
-                 bg='#F4F5F7', fg='#6C5CE7').pack(pady=(10, 20))
-        tk.Label(frame, text='用户登录', font=('微软雅黑', 12, 'bold'),
-                 bg='#F4F5F7', fg='#5A4BD1').pack(pady=(0, 15))
+        tk.Label(card, text='💠', font=('微软雅黑', 28), bg='white', fg='#6C5CE7').pack(pady=(2, 0))
+        tk.Label(card, text='会计系统专业版', font=('微软雅黑', 17, 'bold'),
+                 bg='white', fg='#2D3436').pack(pady=(2, 1))
+        tk.Label(card, text='Professional Accounting System', font=('微软雅黑', 9),
+                 bg='white', fg='#A6A8B8').pack(pady=(0, 18))
 
-        tk.Label(frame, text='用户名:', font=('微软雅黑', 11), bg='#F4F5F7').pack(anchor='w')
+        tk.Label(card, text='用户名', font=('微软雅黑', 10), bg='white', fg='#636E72').pack(anchor='w')
         user_var = tk.StringVar(value='admin')
-        tk.Entry(frame, textvariable=user_var, font=('Consolas', 11)).pack(fill=tk.X, pady=(0, 10))
+        e1 = tk.Entry(card, textvariable=user_var, font=('Consolas', 12),
+                      relief='flat', bg='#F1F2F6')
+        e1.pack(fill=tk.X, ipady=6, pady=(3, 12))
 
-        tk.Label(frame, text='密码:', font=('微软雅黑', 11), bg='#F4F5F7').pack(anchor='w')
+        tk.Label(card, text='密码', font=('微软雅黑', 10), bg='white', fg='#636E72').pack(anchor='w')
         pass_var = tk.StringVar(value='admin123')
-        tk.Entry(frame, textvariable=pass_var, font=('Consolas', 11), show='*').pack(fill=tk.X, pady=(0, 15))
+        e2 = tk.Entry(card, textvariable=pass_var, font=('Consolas', 12), show='●',
+                      relief='flat', bg='#F1F2F6')
+        e2.pack(fill=tk.X, ipady=6, pady=(3, 4))
 
         result_var = tk.StringVar()
-        tk.Label(frame, textvariable=result_var, font=('微软雅黑', 10), bg='#F4F5F7',
-                 fg='#FF4757').pack()
+        tk.Label(card, textvariable=result_var, font=('微软雅黑', 9), bg='white',
+                 fg='#E74C3C').pack(pady=(2, 4))
 
         def do_login():
             r = acc.login(user_var.get(), pass_var.get())
             if r['success']:
                 win.destroy()
             else:
-                result_var.set('❌ 用户名或密码错误')
+                result_var.set('用户名或密码错误')
 
-        tk.Button(frame, text='登 录', font=('微软雅黑', 14, 'bold'),
-                  command=do_login, bg='#6C5CE7', fg='white',
-                  width=25, pady=8, padx=20).pack(pady=15, ipady=4)
+        btn = tk.Button(card, text='登 录', font=('微软雅黑', 13, 'bold'),
+                        command=do_login, bg='#6C5CE7', fg='white', bd=0, cursor='hand2',
+                        activebackground='#5A4BD1', activeforeground='white')
+        btn.pack(fill=tk.X, ipady=8, pady=(6, 12))
 
-        tk.Label(frame, text='默认账号: admin/admin123', font=('微软雅黑', 9),
-                 bg='#F4F5F7', fg='#999999').pack()
+        tk.Label(card, text='演示账号  admin / admin123', font=('微软雅黑', 9),
+                 bg='white', fg='#B4B6C2').pack()
+
         win.bind('<Return>', lambda e: do_login())
+        e1.focus_set()
         win.grab_set()
         self.root.wait_window(win)
         return acc.CURRENT_USER.get('username') != ''
