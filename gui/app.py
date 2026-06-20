@@ -75,6 +75,7 @@ class AccountingApp(
         acc.init_users()
         acc.load_theme()
         self._apply_theme()
+        self._apply_widget_defaults()
 
         if not self._show_login():
             root.destroy()
@@ -105,6 +106,19 @@ class AccountingApp(
         COLOR_ACCENT = t['accent']
         COLOR_VIOLET = t['violet']
         COLOR_PURPLE = t['purple']
+
+    def _apply_widget_defaults(self):
+        """通过 Tk 选项数据库统一所有按钮的默认风格（扁平/无边框/手型/内边距）。
+
+        仅设置默认值，各按钮已显式指定的颜色不受影响。
+        """
+        o = self.root.option_add
+        o('*Button.relief', 'flat')
+        o('*Button.borderWidth', 0)
+        o('*Button.highlightThickness', 0)
+        o('*Button.cursor', 'hand2')
+        o('*Button.padX', 12)
+        o('*Button.padY', 5)
 
     def _show_login(self) -> bool:
         acc.CURRENT_USER = {}
@@ -286,6 +300,7 @@ class AccountingApp(
         win.title('系统设置')
         win.geometry('450x380')
         win.resizable(False, False)
+        win.configure(bg=COLOR_BG)
 
         frame = tk.Frame(win, bg=COLOR_BG, padx=20, pady=20)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -336,6 +351,7 @@ class AccountingApp(
         win.title('用户管理')
         win.geometry('500x400')
         win.resizable(False, False)
+        win.configure(bg=COLOR_BG)
 
         frame = tk.Frame(win, bg=COLOR_BG, padx=15, pady=15)
         frame.pack(fill=tk.BOTH, expand=True)
