@@ -83,8 +83,8 @@ class AccountingApp(
 
         root.deiconify()
         self.root.title('✨ 会计系统专业版 ✨')
-        self.root.geometry('1160x800+150+50')
-        self.root.minsize(1000, 680)
+        self._center(self.root, 1160, 800)
+        self.root.minsize(960, 600)
         self.root.configure(bg=self._c('bg'))
 
         self._build_ui()
@@ -120,12 +120,23 @@ class AccountingApp(
         o('*Button.padX', 12)
         o('*Button.padY', 5)
 
+    def _center(self, win, w: int, h: int):
+        """把窗口按屏幕大小收缩并居中（适配小屏笔记本，避免超出被切掉）。"""
+        sw = win.winfo_screenwidth()
+        sh = win.winfo_screenheight()
+        w = min(w, sw - 80)
+        h = min(h, sh - 100)
+        x = max(0, (sw - w) // 2)
+        y = max(0, (sh - h) // 2 - 20)
+        win.geometry(f'{w}x{h}+{x}+{y}')
+        return w, h
+
     def _show_login(self) -> bool:
         acc.CURRENT_USER = {}
         bg = '#F4F5F7'
         win = tk.Toplevel(self.root)
         win.title('登录 - 会计系统专业版')
-        win.geometry('440x470+500+220')
+        self._center(win, 440, 470)
         win.resizable(False, False)
         win.configure(bg=bg)
 
