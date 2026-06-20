@@ -17,7 +17,7 @@
 
 > 一款功能全面的中文会计桌面系统，提供从凭证录入到财务报表、固定资产管理、税务计算、多币种核算、AI 智能分析、区块链账本、ESG 报告等 29+ 核心模块，覆盖中小企业财务管理的全流程需求。
 
-> **📌 简历摘要：** Python / tkinter / SQLite 全栈自研，29+ 模块覆盖会计全流程。代码重构为 19 个模块化包，类型注解完备，96 个 pytest 测试全覆盖。支持 PyInstaller 打包为 43MB 单文件 EXE 分发。
+> **📌 简历摘要：** 在一套 30+ 模块的遗留会计桌面系统（Python / tkinter / SQLite）基础上，**用 AI 协作、以绞杀者(strangler)模式增量现代化**为分层全栈架构：核心业务解耦为纯函数 + SQLAlchemy ORM 数据层（`DATABASE_URL` 一键切 SQLite/PostgreSQL）→ FastAPI 后端（Pydantic + 自动 Swagger 文档 + JWT 鉴权 + 角色权限，~40 个接口）→ React + TypeScript + Ant Design 前端（14 个页面）→ Docker Compose 一键部署。**164 个 pytest 全过**，全程版本化提交；桌面版亦保留并打磨（现代主题、品牌图标、PyInstaller 单文件 EXE）。
 
 ---
 
@@ -31,6 +31,27 @@
 - [运行截图](#-运行截图)
 - [测试](#-测试)
 - [许可协议](#-许可协议)
+
+---
+
+## 🏗️ 架构与现代化
+
+本项目从一套**遗留单机桌面系统**（tkinter + 裸 `sqlite3`）出发，采用**绞杀者(strangler)模式**增量演进为现代分层架构——不停机、不推翻旧系统，让新栈在旁逐步生长，并复用同一业务核心 `accsys`：
+
+```
+React + TS + AntD  ┐
+                   ├─►  FastAPI (REST + JWT + Swagger)  ─►  SQLAlchemy ORM  ─►  SQLite / PostgreSQL
+Flask Web (备用)   ┘                                            ▲
+tkinter 桌面版 (保留) ───────────────────────────────────────────┘   ← 共用业务核心 accsys
+```
+
+- **业务核心 `accsys`**：领域逻辑与 I/O 解耦——纯计算函数（税务、报表 `*_data`）+ `repo.py`（纯 ORM 数据访问，认 `DATABASE_URL`）。
+- **数据层**：SQLAlchemy 2.0，**24 个 ORM 模型 1:1 镜像原库**；设一个 `DATABASE_URL` 即可从本地 SQLite 切到 PostgreSQL。
+- **后端 API**：FastAPI + Pydantic，自动 OpenAPI/Swagger 文档（`/docs`），**JWT 登录 + 角色权限**（admin / accountant / viewer），约 40 个接口。
+- **Web 前端**：React 18 + TypeScript + Ant Design + Vite，**14 个功能页**（登录 / 仪表盘 / 报表 / 凭证 / 库存 / 薪资 / 项目 / 账龄 / ESG …）。
+- **桌面版**：tkinter 24 个 Tab 完整保留，并做了 UI 现代化（靛紫主题、卡片登录页、品牌图标）+ PyInstaller 单文件 EXE。
+- **部署**：Docker Compose 一键启动（PostgreSQL + FastAPI + Nginx 托管前端）。
+- **质量**：**164 个 pytest 全过**，分阶段、可回溯的 git 提交历史。
 
 ---
 
@@ -187,15 +208,18 @@
 
 | 类别 | 技术 | 用途 |
 |------|------|------|
-| **语言** | Python 3.10+ | 核心开发语言 |
-| **GUI** | tkinter / ttk | 桌面图形界面，24 个功能 Tab |
-| **数据库** | SQLite 3 | 本地数据存储 (单文件) |
-| **图表** | matplotlib | 数据可视化 (柱状图、饼图、趋势图、雷达图) |
-| **Excel** | openpyxl | 报表导出、样式美化 |
-| **网络** | requests | 汇率获取、AI API 调用 |
-| **加密** | hashlib (SHA-256) | 区块链哈希链 |
-| **打包** | PyInstaller | 单文件 EXE 分发 |
-| **图片** | Pillow | 图标与图片处理 |
+| **语言** | Python 3.10+ / TypeScript | 后端 / 前端 |
+| **桌面 GUI** | tkinter / ttk | 桌面图形界面，24 个功能 Tab |
+| **后端 API** | FastAPI + Pydantic | REST 接口、数据校验、自动 Swagger 文档 |
+| **鉴权** | PyJWT (JWT) | 登录令牌 + 角色权限 |
+| **ORM / 数据层** | SQLAlchemy 2.0 | 24 个模型，`DATABASE_URL` 切换数据库 |
+| **数据库** | SQLite 3 / PostgreSQL | 本地单文件 / 生产多用户 |
+| **Web 前端** | React 18 + Ant Design + Vite | 14 个功能页，现代后台 UI |
+| **图表** | matplotlib / ECharts | 桌面 / Web 数据可视化 |
+| **测试** | pytest | 164 个用例，覆盖核心/API/数据层 |
+| **部署** | Docker Compose + Nginx | 一键启动 db + api + 前端 |
+| **打包** | PyInstaller | 桌面版单文件 EXE（带品牌图标） |
+| **其他** | openpyxl / requests / hashlib / Pillow | Excel / 网络 / SHA-256 区块链 / 图标 |
 
 ---
 
@@ -263,15 +287,33 @@ accounting_system/                    # 项目根目录
 │       ├── cashflow.py               #   现金流量
 │       └── attachments.py            #   附件管理
 │
-├── tests/                            # 测试目录 (pytest)
-│   └── test_core.py                  #   96 个单元测试
+├── tests/                            # 测试目录 (pytest, 164 个用例)
+│   ├── test_core.py                  #   核心业务 / 报表 / 税务
+│   ├── test_repo.py                  #   SQLAlchemy ORM 数据层
+│   ├── test_api.py                   #   FastAPI 接口 / 鉴权 / 写操作
+│   └── test_webapp.py                #   Flask 网页路由
 │
+├── api/                              # FastAPI 后端 (REST + JWT + Swagger)
+│   ├── main.py                       #   应用与路由
+│   ├── schemas.py                    #   Pydantic 模型
+│   └── auth.py                       #   JWT 鉴权与角色权限
+│
+├── frontend/                         # React + TS + AntD 前端 (Vite)
+│   ├── src/pages/                    #   14 个功能页
+│   ├── src/api.ts                    #   接口客户端 (axios + JWT)
+│   └── Dockerfile / nginx.conf       #   前端容器与反代
+│
+├── webapp.py                         # Flask 备用网页端 (复用 ORM repo)
+├── seed_data.py                      # 演示数据填充脚本
+├── Dockerfile                        # 后端镜像
+├── docker-compose.yml                # 一键部署 (db + api + 前端)
+├── accounting_icon.ico               # 品牌图标
 ├── screenshots/                      # 运行截图
-├── main.py                           # 程序入口
-├── requirements.txt                  # 依赖清单
-├── accounting.py                     # 原始单文件版 (保留)
-└── accounting_gui.py                 # 原始 GUI 单文件版 (保留)
+├── main.py                           # 桌面版入口
+└── requirements.txt                  # 依赖清单
 ```
+
+> 注：`accsys/` 新增 `db.py`（引擎/会话）、`models.py`（24 个 ORM 模型）、`repo.py`（纯 ORM 数据访问，认 `DATABASE_URL`），构成可切 SQLite/PostgreSQL 的数据层。
 
 ---
 
@@ -292,13 +334,26 @@ cd accounting_system
 # 2. 安装依赖
 pip install -r requirements.txt
 
-# 3. 运行程序
+# 3. 三种运行方式（任选）
+
+# ① 桌面版（tkinter）
 python main.py
+
+# ② 后端 API（FastAPI）— 自动文档 http://localhost:8000/docs
+uvicorn api.main:app --reload
+
+# ③ Web 前端（React）— http://localhost:5173
+cd frontend && npm install && npm run dev
 ```
 
-程序启动后会自动创建 SQLite 数据库 (`accounting.db`) 和科目表，并弹出登录窗口。
+> 默认账号：`admin / admin123`（管理员）、`accountant / acc123`（会计）、`viewer / view123`（只读）
 
-> 默认管理员账号：`admin` / `admin123`
+### 🐳 Docker 一键部署
+
+```bash
+docker compose up --build
+# 前端 http://localhost:8080   后端 http://localhost:8000/docs
+```
 
 ### 依赖清单
 
@@ -382,12 +437,17 @@ screenshots/
 # 安装测试依赖
 pip install pytest
 
-# 运行所有测试
-pytest tests/ -v
+# 运行全部测试（共 164 个用例，全部通过）
+pytest
 
-# 运行指定测试模块
-pytest tests/test_vouchers.py -v
+# 按模块运行
+pytest tests/test_core.py     # 核心业务 / 报表 / 税务
+pytest tests/test_repo.py     # SQLAlchemy ORM 数据层
+pytest tests/test_api.py      # FastAPI 接口 / 鉴权 / 写操作
+pytest tests/test_webapp.py   # Flask 网页路由
 ```
+
+> 测试覆盖核心业务逻辑、ORM 数据层、REST API（含 JWT 鉴权与角色权限）及 Web 路由。
 
 ---
 
