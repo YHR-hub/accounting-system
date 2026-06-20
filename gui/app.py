@@ -410,10 +410,15 @@ class AccountingApp(
 
 
 def main():
+    import os
+    import sys
     root = tk.Tk()
     root.title('会计系统专业版')
     try:
-        root.iconbitmap(default='')
+        base = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ico = os.path.join(base, 'accounting_icon.ico')
+        if os.path.exists(ico):
+            root.iconbitmap(ico)
     except Exception:
         pass
     app = AccountingApp(root)
