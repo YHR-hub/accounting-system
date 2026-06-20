@@ -200,6 +200,8 @@ class AccountingApp(
                   bg=self._c('accent'), fg='white', bd=0, padx=15, cursor='hand2',
                   activebackground=self._c('violet'), activeforeground='white').pack(side=tk.RIGHT, padx=10)
 
+        tk.Frame(self.root, bg=self._c('tab_act'), height=2).pack(fill=tk.X)
+
         style = ttk.Style()
         style.theme_use('default')
         style.configure('TNotebook', background=self._c('bg'), borderwidth=0)
@@ -340,11 +342,33 @@ class AccountingApp(
             messagebox.showinfo('完成', '数据库优化完成')
 
     def _show_about(self):
-        messagebox.showinfo('关于', '会计系统专业版 v2.0\n\n'
-                              '功能: 凭证管理/财务报表/固定资产/税务/多币种\n'
-                              '       期末处理/数据可视化/智能分析/区块链账本\n'
-                              '       ESG报告/创业工具/AI智能助手\n\n'
-                              '技术支持: AI驱动, Python + Tkinter')
+        win = tk.Toplevel(self.root)
+        win.title('关于')
+        win.geometry('440x380')
+        win.resizable(False, False)
+        win.configure(bg=COLOR_BG)
+
+        card = tk.Frame(win, bg='white', padx=28, pady=22,
+                        highlightbackground='#E3E5F0', highlightthickness=1)
+        card.pack(fill=tk.BOTH, expand=True, padx=16, pady=16)
+
+        tk.Label(card, text='💠', font=('微软雅黑', 30), bg='white', fg=self._c('primary')).pack()
+        tk.Label(card, text='会计系统专业版 v2.0', font=('微软雅黑', 16, 'bold'),
+                 bg='white', fg='#2D3436').pack(pady=(2, 1))
+        tk.Label(card, text='Professional Accounting System', font=('微软雅黑', 9),
+                 bg='white', fg='#A6A8B8').pack(pady=(0, 14))
+
+        info = ('凭证管理 · 财务报表 · 固定资产 · 税务 · 多币种\n'
+                '期末处理 · 数据可视化 · 智能分析 · 区块链账本\n'
+                'ESG 报告 · 库存 / 薪资 / 项目 · AI 智能助手')
+        tk.Label(card, text=info, font=('微软雅黑', 10), bg='white', fg='#636E72',
+                 justify='center').pack(pady=(0, 12))
+        tk.Label(card, text='Python · Tkinter · SQLite · FastAPI · React',
+                 font=('微软雅黑', 9), bg='white', fg='#9AA0B5').pack()
+
+        tk.Button(card, text='关 闭', font=('微软雅黑', 11, 'bold'), command=win.destroy,
+                  bg=self._c('primary'), fg='white').pack(pady=(18, 0), ipadx=24, ipady=4)
+        win.grab_set()
 
     def _show_user_mgmt(self):
         win = tk.Toplevel(self.root)
