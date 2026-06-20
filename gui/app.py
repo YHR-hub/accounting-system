@@ -223,6 +223,18 @@ class AccountingApp(
         style.configure('Horizontal.TScrollbar', background=self._c('tab_bg'), borderwidth=0, troughcolor=self._c('bg'))
         style.configure('TCombobox', fieldbackground=self._c('text_bg'), background=self._c('tab_bg'))
 
+        # 底部状态栏
+        status = tk.Frame(self.root, bg=self._c('tab_bg'), height=26)
+        status.pack(fill=tk.X, side=tk.BOTTOM)
+        status.pack_propagate(False)
+        su = acc.CURRENT_USER
+        tk.Label(status, text=f'👤 {su.get("display_name","")}（{role_label.get(su.get("role",""),"")}）',
+                 bg=self._c('tab_bg'), fg=self._c('tab_fg'), font=FONT_SMALL).pack(side=tk.LEFT, padx=12)
+        tk.Label(status, text=f'📅 {date.today().isoformat()}',
+                 bg=self._c('tab_bg'), fg=self._c('tab_fg'), font=FONT_SMALL).pack(side=tk.LEFT, padx=4)
+        tk.Label(status, text='● 就绪', bg=self._c('tab_bg'), fg=self._c('success'),
+                 font=FONT_SMALL).pack(side=tk.RIGHT, padx=12)
+
         nb = ttk.Notebook(self.root)
         nb.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
