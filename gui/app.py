@@ -39,9 +39,11 @@ from gui.tabs.payroll import PayrollTabMixin
 from gui.tabs.projects import ProjectsTabMixin
 from gui.tabs.cashflow import CashflowTabMixin
 from gui.tabs.attachments import AttachmentsTabMixin
+from gui.tabs.overview import OverviewTabMixin
 
 
 class AccountingApp(
+    OverviewTabMixin,
     VoucherTabMixin,
     QueryTabMixin,
     AccountsTabMixin,
@@ -251,6 +253,7 @@ class AccountingApp(
 
         self.tabs = {}
         tab_names = [
+            ('overview', '  🏠 概览  '),
             ('voucher', '  ✏️ 凭证录入  '),
             ('query', '  🔍 凭证查询  '),
             ('accounts', '  💰 科目余额  '),
@@ -282,6 +285,7 @@ class AccountingApp(
             self.tabs[key] = frame
 
         self.notebook = nb
+        self._build_overview_tab()
         self._build_voucher_tab()
         self._build_query_tab()
         self._build_accounts_tab()
