@@ -27,6 +27,9 @@ def _base_dir() -> str:
 
 
 def get_db_path() -> str:
+    override = os.environ.get("ACCSYS_DB_PATH")
+    if override:
+        return override
     return os.path.join(_base_dir(), DB_FILE)
 
 
