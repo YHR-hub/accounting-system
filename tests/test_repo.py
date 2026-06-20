@@ -150,6 +150,24 @@ def test_voucher_detail_account_and_trial_balance(engine):
         assert tb["total_debit"] == tb["total_credit"]
 
 
+def test_trend_data(engine):
+    repo.bootstrap(engine)
+    with Session(engine) as s:
+        v = Voucher(voucher_no="记-2026-06-7001", date="2026-06-01", summary="收入",
+                    fiscal_year=2026, fiscal_month=6)
+        s.add(v)
+        s.flush()
+        s.add(JournalEntry(voucher_id=v.id, account_code="6001", debit=Decimal("0"), credit=Decimal("1000")))
+        s.add(JournalEntry(voucher_id=v.id, account_code="6602", debit=Decimal("400"), credit=Decimal("0")))
+        s.commit()
+        t = repo.trend_data(s, 2026)
+        assert len(t) == 1
+        assert t[0]["month"] == "2026-06"
+        assert t[0]["revenue"] == 1000.0
+        assert t[0]["expense"] == 400.0
+        assert t[0]["profit"] == 600.0
+
+
 def test_aging_pnl_deactivate_update(engine):
     import datetime as _dt
     repo.bootstrap(engine)

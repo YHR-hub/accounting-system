@@ -383,6 +383,11 @@ def report_trial_balance(db: Session = Depends(get_db)):
     return repo.trial_balance_data(db)
 
 
+@app.get("/api/trend", tags=["报表"])
+def report_trend(year: int = Query(2026), db: Session = Depends(get_db)):
+    return repo.trend_data(db, year)
+
+
 # ── 账龄 / 预算执行 / 项目损益 ────────────────────────
 @app.get("/api/aging", tags=["应收应付"])
 def aging(db: Session = Depends(get_db)):

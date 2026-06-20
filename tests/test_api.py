@@ -202,6 +202,12 @@ def test_trial_balance():
     assert "balanced" in body and "rows" in body
 
 
+def test_trend():
+    r = client.get("/api/trend", params={"year": 2026})
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
+
 def test_voucher_detail_and_404():
     h = _auth_header("admin", "admin123")
     created = client.post("/api/vouchers", headers=h, json=_balanced_payload())

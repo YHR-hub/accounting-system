@@ -672,6 +672,36 @@ def add_account(session: Session, code: str, name: str, category: str,
     return {"code": a.code, "name": a.name, "category": a.category, "nature": a.nature}
 
 
+def trend_data(session: Session, year: int = 2026) -> List[dict]:
+    """按月统计收入/支出/利润（用于趋势图）。"""
+    cat = {a["code"]: a["category"] for a in load_accounts(session)}
+    rows = session.execute(
+        select(
+            Voucher.fiscal_year, Voucher.fiscal_month, JournalEntry.account_code,
+            func.coalesce(func.sum(JournalEntry.debit), 0),
+            func.coalesce(func.sum(JournalEntry.credit), 0),
+        )
+        .join(Voucher, Voucher.id == JournalEntry.voucher_id)
+        .where(Voucher.fiscal_year == year)
+        .group_by(Voucher.fiscal_year, Voucher.fiscal_month, JournalEntry.account_code)
+    ).all()
+    months: Dict[str, list] = {}
+    for fy, fm, code, d, c in rows:
+        c_cat = cat.get(code)
+        key = f"{fy}-{fm:02d}"
+        months.setdefault(key, [0.0, 0.0])
+        if c_cat == "income":
+            months[key][0] += _f(c) - _f(d)
+        elif c_cat == "expense":
+            months[key][1] += _f(d) - _f(c)
+    out = []
+    for m in sorted(months):
+        rev, exp = months[m]
+        out.append({"month": m, "revenue": round(rev, 2),
+                    "expense": round(exp, 2), "profit": round(rev - exp, 2)})
+    return out
+
+
 def trial_balance_data(session: Session) -> dict:
     accounts = load_accounts(session)
     balances = calc_balances(session, accounts)

@@ -1,17 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Card, Col, Row, Statistic, Table, Spin } from 'antd'
-import { api, type AccountOut } from '../api'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
+import { api, type AccountOut, type TrendPoint } from '../api'
 
 export default function Dashboard() {
   const [ratios, setRatios] = useState<Record<string, number>>({})
   const [accts, setAccts] = useState<AccountOut[]>([])
+  const [trend, setTrend] = useState<TrendPoint[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([api.ratios(), api.accounts()])
-      .then(([r, a]) => {
+    Promise.all([api.ratios(), api.accounts(), api.trend(2026)])
+      .then(([r, a, t]) => {
         setRatios(r)
         setAccts(a)
+        setTrend(t)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -48,6 +60,22 @@ export default function Dashboard() {
           </Card>
         </Col>
       </Row>
+
+      <Card title="月度收支趋势" style={{ marginTop: 16 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={trend} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="revenue" name="收入" stroke="#6c5ce7" strokeWidth={2} />
+            <Line type="monotone" dataKey="expense" name="支出" stroke="#d63031" strokeWidth={2} />
+            <Line type="monotone" dataKey="profit" name="利润" stroke="#00b894" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
+
       <Card title="财务比率" style={{ marginTop: 16 }}>
         <Table
           size="small"

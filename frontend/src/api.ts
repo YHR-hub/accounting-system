@@ -208,6 +208,12 @@ export interface BudgetExec extends Budget {
   actual: number
   execution_rate: number
 }
+export interface TrendPoint {
+  month: string
+  revenue: number
+  expense: number
+  profit: number
+}
 
 export const api = {
   login: (username: string, password: string) =>
@@ -262,5 +268,7 @@ export const api = {
   deactivateAccount: (code: string) => http.post(`/api/accounts/${code}/deactivate`),
   updateEmployee: (id: number, body: Record<string, unknown>) =>
     http.put(`/api/employees/${id}`, body),
+  trend: (year: number) =>
+    http.get<TrendPoint[]>('/api/trend', { params: { year } }).then((r) => r.data),
   exportExcelUrl: '/api/reports/export.xlsx',
 }
