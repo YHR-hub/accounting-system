@@ -18,3 +18,10 @@ COLOR_VIOLET = '#5A4BD1'
 COLOR_PURPLE = '#8E7CF0'
 
 MOOD_COLORS: Dict = {}
+
+# 特性开关：实验性/探索性模块（区块链账本、ESG、AI 助手）。
+# True=显示全部功能（演示广度）；False=只保留核心会计功能（聚焦演示）。
+# 可在此切换，或设环境变量 SHOW_EXPERIMENTAL=0 关闭。
+import os as _os
+SHOW_EXPERIMENTAL = _os.environ.get('SHOW_EXPERIMENTAL', '1') != '0'
+EXPERIMENTAL_TABS = ('blockchain', 'esg', 'ai')

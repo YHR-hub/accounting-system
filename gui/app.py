@@ -12,7 +12,7 @@ from gui.constants import (
     FONT_TITLE, FONT_SUB, FONT_TEXT, FONT_SMALL, FONT_CUTE,
     COLOR_BG, COLOR_PRIMARY, COLOR_SUCCESS, COLOR_WARN,
     COLOR_ALT, COLOR_ACCENT, COLOR_VIOLET, COLOR_PURPLE,
-    MOOD_COLORS,
+    MOOD_COLORS, SHOW_EXPERIMENTAL, EXPERIMENTAL_TABS,
 )
 
 from gui.tabs.voucher import VoucherTabMixin
@@ -279,6 +279,8 @@ class AccountingApp(
             ('cashflow', '  💵 现金流量  '),
             ('attachments', '  📎 附件管理  '),
         ]
+        if not SHOW_EXPERIMENTAL:
+            tab_names = [t for t in tab_names if t[0] not in EXPERIMENTAL_TABS]
         for key, label in tab_names:
             frame = tk.Frame(nb, bg=COLOR_BG)
             nb.add(frame, text=label)
@@ -294,13 +296,16 @@ class AccountingApp(
         self._build_assets_tab()
         self._build_viz_tab()
         self._build_intel_tab()
-        self._build_blockchain_tab()
-        self._build_esg_tab()
+        if 'blockchain' in self.tabs:
+            self._build_blockchain_tab()
+        if 'esg' in self.tabs:
+            self._build_esg_tab()
         self._build_startup_tab()
         self._build_aging_tab()
         self._build_budget_tab()
         self._build_inventory_tab()
-        self._build_ai_tab()
+        if 'ai' in self.tabs:
+            self._build_ai_tab()
         self._build_tax_tab()
         self._build_currency_tab()
         self._build_audit_tab()
