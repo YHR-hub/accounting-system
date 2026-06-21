@@ -6,6 +6,12 @@ from tkinter import messagebox
 import accsys as acc
 from gui.constants import FONT_SUB, FONT_TEXT, FONT_SMALL
 
+try:
+    import matplotlib
+    matplotlib.use("TkAgg")
+except Exception:
+    matplotlib = None
+
 
 class OverviewTabMixin:
     def _build_overview_tab(self):
@@ -75,6 +81,19 @@ class OverviewTabMixin:
                   fg='white', command=self._overview_export).pack(anchor='w', padx=18, pady=(0, 14))
         tk.Label(f, text='提示：左侧标签页可查看凭证、报表、库存、薪资、项目等全部功能。',
                  font=FONT_SMALL, bg=self._c('bg'), fg='#9AA0B5').pack(anchor='w', padx=18)
+
+        # —— 嵌入收支柱状图（失败则跳过，不影响首页）——
+        try:
+            from datetime import date
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            chart_box = tk.Frame(f, bg='white', highlightbackground='#E3E5F0', highlightthickness=1)
+            chart_box.pack(fill=tk.BOTH, expand=True, padx=18, pady=(8, 14))
+            fig = acc.chart_income_expense(date.today().year)
+            canvas = FigureCanvasTkAgg(fig, master=chart_box)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        except Exception:
+            pass
 
     def _overview_export(self):
         try:
