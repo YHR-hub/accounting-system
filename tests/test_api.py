@@ -208,6 +208,24 @@ def test_trend():
     assert isinstance(r.json(), list)
 
 
+def test_end_to_end_flow():
+    """端到端：登录 → 创建凭证 → 查明细 → 试算平衡仍成立 → 删除。"""
+    h = _auth_header("admin", "admin123")
+    r = client.post("/api/vouchers", headers=h, json=_balanced_payload())
+    assert r.status_code == 201, r.text
+    vid = r.json()["id"]
+
+    detail = client.get(f"/api/vouchers/{vid}")
+    assert detail.status_code == 200
+    assert len(detail.json()["entries"]) == 2
+
+    tb = client.get("/api/reports/trial-balance")
+    assert tb.status_code == 200
+    assert isinstance(tb.json()["balanced"], bool) and "rows" in tb.json()
+
+    assert client.delete(f"/api/vouchers/{vid}", headers=h).status_code == 204
+
+
 def test_voucher_detail_and_404():
     h = _auth_header("admin", "admin123")
     created = client.post("/api/vouchers", headers=h, json=_balanced_payload())

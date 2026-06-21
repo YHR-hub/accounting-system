@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -18,7 +19,7 @@ from sqlalchemy import select
 from accsys.db import SessionLocal
 from accsys.models import User
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "dev-secret-change-me-in-production-please-32b")
+SECRET_KEY = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "480"))
 
