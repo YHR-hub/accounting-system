@@ -5,13 +5,13 @@
 **全功能中文会计桌面应用 · 适合中小企业财务管理**
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![tkinter](https://img.shields.io/badge/tkinter-Desktop%20GUI-FF6B9D?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/tkinter.html)
-[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![Matplotlib](https://img.shields.io/badge/Matplotlib-Charts-11557C?style=for-the-badge&logo=python&logoColor=white)](https://matplotlib.org/)
-[![Blockchain](https://img.shields.io/badge/Blockchain-SHA--256-121D33?style=for-the-badge&logo=blockchain.com&logoColor=white)](https://en.wikipedia.org/wiki/SHA-2)
-[![AI](https://img.shields.io/badge/AI-Cloud%20Integration-8B5CF6?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
-[![ESG](https://img.shields.io/badge/ESG-Reporting-4CAF50?style=for-the-badge&logo=leaflet&logoColor=white)](https://en.wikipedia.org/wiki/Environmental,_social_and_governance)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/tests-167%20passed-brightgreen?style=for-the-badge)](#-测试)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/YHR-hub/accounting-system?style=for-the-badge)](https://github.com/YHR-hub/accounting-system)
 
 </div>
 

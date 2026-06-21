@@ -1,0 +1,9 @@
+# 规范换行符，消除跨平台 LF/CRLF 警告
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.ico binary
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.db binary
