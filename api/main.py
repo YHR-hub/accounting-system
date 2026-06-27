@@ -27,6 +27,8 @@ from .auth import create_access_token, get_current_user, require_roles, verify_u
 from .schemas import (
     AccountCreate,
     AccountOut,
+    AiQueryRequest,
+    AiQueryResponse,
     EmployeeCreate,
     EmployeeUpdate,
     FixedAssetCreate,
@@ -460,3 +462,12 @@ def export_excel(db: Session = Depends(get_db)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=report.xlsx"},
     )
+
+
+# ── AI 自然语言问数 ────────────────────────────────
+@app.post("/api/ai/query", response_model=AiQueryResponse, tags=["AI"])
+def ai_query(body: AiQueryRequest):
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="问题不能为空")
+    return AiQueryResponse(result=acc.ai_query_database(question))

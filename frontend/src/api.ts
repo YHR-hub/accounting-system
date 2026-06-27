@@ -270,5 +270,7 @@ export const api = {
     http.put(`/api/employees/${id}`, body),
   trend: (year: number) =>
     http.get<TrendPoint[]>('/api/trend', { params: { year } }).then((r) => r.data),
+  aiQuery: (question: string) =>
+    http.post<{ result: string }>('/api/ai/query', { question }).then((r) => r.data),
   exportExcelUrl: '/api/reports/export.xlsx',
 }

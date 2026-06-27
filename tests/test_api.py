@@ -282,3 +282,9 @@ def test_update_employee():
     eid = r.json()["id"]
     assert client.put(f"/api/employees/{eid}", json={"name": "改名"}).status_code == 401
     assert client.put(f"/api/employees/{eid}", headers=h, json={"name": "改名", "base_salary": 9000}).status_code == 200
+
+
+def test_ai_query():
+    r = client.post("/api/ai/query", json={"question": "凭证数量"})
+    assert r.status_code == 200
+    assert "result" in r.json()

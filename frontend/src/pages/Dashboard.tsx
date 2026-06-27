@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Col, Row, Statistic, Table, Spin } from 'antd'
+import { Card, Col, Row, Statistic, Table, Spin, Input, Button } from 'antd'
 import {
   LineChart,
   Line,
@@ -17,6 +17,9 @@ export default function Dashboard() {
   const [accts, setAccts] = useState<AccountOut[]>([])
   const [trend, setTrend] = useState<TrendPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [aiQ, setAiQ] = useState('')
+  const [aiA, setAiA] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([api.ratios(), api.accounts(), api.trend(2026)])
@@ -86,6 +89,36 @@ export default function Dashboard() {
             { title: '数值', dataIndex: 'value', align: 'right' },
           ]}
         />
+      </Card>
+      <Card title="💬 AI 财务问答" style={{ marginTop: 16 }}>
+        <Input.TextArea
+          value={aiQ}
+          onChange={(e) => setAiQ(e.target.value)}
+          placeholder="用自然语言问财务数据，如：今年收入最高的科目是哪些？"
+          rows={2}
+          style={{ marginBottom: 8 }}
+        />
+        <Button
+          type="primary"
+          loading={aiLoading}
+          onClick={async () => {
+            setAiLoading(true)
+            try {
+              const res = await api.aiQuery(aiQ)
+              setAiA(res.result)
+            } catch {
+              setAiA('查询失败')
+            }
+            setAiLoading(false)
+          }}
+        >
+          提问
+        </Button>
+        {aiA && (
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 12, background: '#f5f6fa', padding: 12, borderRadius: 6 }}>
+            {aiA}
+          </pre>
+        )}
       </Card>
     </>
   )

@@ -156,3 +156,11 @@ class EmployeeUpdate(BaseModel):
     base_salary: Optional[float] = None
     insurance: Optional[float] = None
     housing_fund: Optional[float] = None
+
+
+class AiQueryRequest(BaseModel):
+    question: str
+
+
+class AiQueryResponse(BaseModel):
+    result: str
